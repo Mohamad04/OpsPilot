@@ -1,5 +1,35 @@
+GET http://localhost:8080/api/organisations
 ### GET request to example server
-GET https://examples.http-client.intellij.net/get
-    ?generated-in=IntelliJ IDEA
+
 
 ###
+POST http://localhost:8080/api/organisations
+Content-Type: application/json
+
+{
+  "name": "Acme Corporation",
+  "slug": "acme"
+}
+
+###
+
+GET http://localhost:8080/api/organisations
+
+###
+POST http://localhost:8080/api/organisations
+Content-Type: application/json
+
+{
+  "name": "",
+  "slug": "INVALID SLUG"
+}
+
+###
+
+POST http://localhost:8080/api/organisations
+Content-Type: application/json
+
+{
+  "name": "Acme",
+  "slug":
+}
