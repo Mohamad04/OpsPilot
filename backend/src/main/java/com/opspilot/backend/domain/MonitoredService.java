@@ -1,5 +1,6 @@
 package com.opspilot.backend.domain;
 
+import com.opspilot.backend.domain.exception.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,10 +14,10 @@ import java.util.UUID;
 @Table(name= "monitored_services")
 public class MonitoredService {
 
-    public static final int NAME_MAX_LENGTH = 120;
-    public static final int BASE_URL_MAX_LENGTH = 2048;
-    public static final int HEALTH_ENDPOINT_MAX_LENGTH = 2048;
-    public static final int OWNER_MAX_LENGTH = 100;
+    static final int NAME_MAX_LENGTH = 120;
+    static final int BASE_URL_MAX_LENGTH = 2048;
+    static final int HEALTH_ENDPOINT_MAX_LENGTH = 2048;
+    static final int OWNER_MAX_LENGTH = 100;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -150,23 +151,23 @@ public class MonitoredService {
     }
     public void enable() {
         if(this.enabled) {
-            throw new IllegalStateException("Monitored service is already enabled.");
+            throw new MonitoredServiceAlreadyInStatusException(this.enabled);
         }
         this.enabled = true;
     }
     public void disable() {
         if(!this.enabled) {
-            throw new IllegalStateException("Monitored service is not enabled.");
+            throw new MonitoredServiceAlreadyInStatusException(this.enabled);
         }
         this.enabled = false;
     }
 
     private static void validateName(String name){
         if(name == null || name.isBlank()){
-            throw new IllegalArgumentException("Name cannot be null or blank.");
+            throw new InvalidMonitoredServiceNameException("Name cannot be null or blank.");
         }
         if(name.length() > NAME_MAX_LENGTH){
-            throw new IllegalArgumentException("Name cannot exceed %d characters.".formatted(NAME_MAX_LENGTH));
+            throw new InvalidMonitoredServiceNameException("Name cannot exceed %d characters.".formatted(NAME_MAX_LENGTH));
         }
     }
     private static void validateServiceType(ServiceType serviceType){
@@ -186,10 +187,10 @@ public class MonitoredService {
     }
     private static void validateBaseUrl(String baseUrl){
         if(baseUrl == null || baseUrl.isBlank()){
-            throw new IllegalArgumentException("Base URL cannot be null or blank.");
+            throw new InvalidMonitoredServiceBaseUrlException("Base URL cannot be null or blank.");
         }
         if(baseUrl.length() > BASE_URL_MAX_LENGTH){
-            throw new IllegalArgumentException("Base URL cannot exceed %d characters.".formatted(BASE_URL_MAX_LENGTH));
+            throw new InvalidMonitoredServiceBaseUrlException("Base URL cannot exceed %d characters.".formatted(BASE_URL_MAX_LENGTH));
         }
         try {
             URI uri = new URI(baseUrl);
@@ -198,42 +199,42 @@ public class MonitoredService {
 
             if (scheme == null ||
                     !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-                throw new IllegalArgumentException(
+                throw new InvalidMonitoredServiceBaseUrlException(
                         "Base URL must use HTTP or HTTPS."
                 );
             }
 
             if (uri.getHost() == null) {
-                throw new IllegalArgumentException(
+                throw new InvalidMonitoredServiceBaseUrlException(
                         "Base URL must contain a valid host."
                 );
             }
 
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException(
+            throw new InvalidMonitoredServiceBaseUrlException(
                     "Base URL is not valid."
             );
         }
     }
     private static void validateHealthEndpoint(String healthEndpoint){
         if(healthEndpoint == null || healthEndpoint.isBlank()){
-            throw new IllegalArgumentException("Health Endpoint cannot be null or blank.");
+            throw new InvalidMonitoredServiceHealthEndpointException("Health endpoint cannot be null or blank.");
         }
         if(healthEndpoint.length() > HEALTH_ENDPOINT_MAX_LENGTH){
-            throw new IllegalArgumentException("Health Endpoint cannot exceed %d characters.".formatted(HEALTH_ENDPOINT_MAX_LENGTH));
+            throw new InvalidMonitoredServiceHealthEndpointException("Health endpoint cannot exceed %d characters.".formatted(HEALTH_ENDPOINT_MAX_LENGTH));
         }
         if (!healthEndpoint.startsWith("/") || healthEndpoint.startsWith("//")) {
-            throw new IllegalArgumentException(
+            throw new InvalidMonitoredServiceHealthEndpointException(
                     "Health endpoint must be an absolute path starting with a single '/'."
             );
         }
         }
     private static void validateOwner(String owner){
         if(owner == null || owner.isBlank()){
-            throw new IllegalArgumentException("Owner cannot be null or blank.");
+            throw new InvalidMonitoredServiceOwnerException("Owner cannot be null or blank.");
         }
         if(owner.length() > OWNER_MAX_LENGTH){
-            throw new IllegalArgumentException("Owner cannot exceed %d characters.".formatted(OWNER_MAX_LENGTH));
+            throw new InvalidMonitoredServiceOwnerException("Owner cannot exceed %d characters.".formatted(OWNER_MAX_LENGTH));
         }
     }
 
