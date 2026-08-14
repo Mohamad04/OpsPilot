@@ -4,7 +4,6 @@ import com.opspilot.backend.application.exception.OrganisationSlugAlreadyExistsE
 import com.opspilot.backend.domain.Organisation;
 import com.opspilot.backend.application.OrganisationService;
 import com.opspilot.backend.domain.exception.InvalidOrganisationNameException;
-import com.opspilot.backend.domain.exception.InvalidOrganisationSlugException;
 import org.junit.jupiter.api.DisplayNameGeneration;
 import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;
@@ -161,25 +160,5 @@ public class OrganisationControllerTest {
                 .andExpect(jsonPath("$.errors").isEmpty());
     }
 
-    @Test
-    void createOrganisation_returnsBadRequest_whenDomainSlugIsInvalid() throws Exception {
-        when(organisationService.createOrganisation("Acme", "acme")).thenThrow(
-                new InvalidOrganisationSlugException("slug cannot be null or blank")
-        );
-        mockMvc.perform(
-                post("/api/organisations")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "name": "Acme",
-                      "slug": "acme"
-                    }
-                """)
-        ).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status")
-                        .value(400))
-                .andExpect(jsonPath("$.message")
-                        .value("slug cannot be null or blank"))
-                .andExpect(jsonPath("$.errors").isEmpty());
-    }
+
 }

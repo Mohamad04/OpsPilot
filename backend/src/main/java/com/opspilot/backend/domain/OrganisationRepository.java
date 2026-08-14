@@ -12,7 +12,7 @@ public interface OrganisationRepository
     List<Organisation> findAllByName(String name);
 
     Optional<Organisation> findBySlug(String slug);
-
+    Optional<Organisation> findById(UUID id);
     List<Organisation> findAllByStatus(OrganisationStatus status);
 
     boolean existsBySlug(String slug);

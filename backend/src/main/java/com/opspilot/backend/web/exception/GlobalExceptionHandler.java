@@ -1,10 +1,9 @@
 package com.opspilot.backend.web.exception;
 
+import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
 import com.opspilot.backend.application.exception.OrganisationNotFoundException;
 import com.opspilot.backend.application.exception.OrganisationSlugAlreadyExistsException;
-import com.opspilot.backend.domain.exception.InvalidOrganisationNameException;
-import com.opspilot.backend.domain.exception.InvalidOrganisationSlugException;
-import com.opspilot.backend.domain.exception.OrganisationAlreadyInStatusException;
+import com.opspilot.backend.domain.exception.*;
 import com.opspilot.backend.web.dto.ApiError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -109,6 +108,80 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 new ApiError(
                         HttpStatus.NOT_FOUND.value(),
+                        e.getMessage(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(MonitoredServiceNotFoundException.class)
+    public ResponseEntity<ApiError> handleMonitoredServiceNotFoundException(
+            MonitoredServiceNotFoundException e) {
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ApiError(
+                        HttpStatus.NOT_FOUND.value(),
+                        e.getMessage(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(MonitoredServiceAlreadyInStatusException.class)
+    public ResponseEntity<ApiError> handleMonitoredServiceAlreadyInStatusException(
+            MonitoredServiceAlreadyInStatusException e) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new ApiError(
+                        HttpStatus.CONFLICT.value(),
+                        e.getMessage(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidMonitoredServiceOwnerException.class)
+    public ResponseEntity<ApiError> handleInvalidMonitoredServiceOwnerException(
+            InvalidMonitoredServiceOwnerException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new ApiError(
+                        HttpStatus.BAD_REQUEST.value(),
+                        e.getMessage(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidMonitoredServiceBaseUrlException.class)
+    public ResponseEntity<ApiError> handleInvalidMonitoredServiceBaseUrlException(
+            InvalidMonitoredServiceBaseUrlException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new ApiError(
+                        HttpStatus.BAD_REQUEST.value(),
+                        e.getMessage(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidMonitoredServiceNameException.class)
+    public ResponseEntity<ApiError> handleInvalidMonitoredServiceNameException(
+            InvalidMonitoredServiceNameException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new ApiError(
+                        HttpStatus.BAD_REQUEST.value(),
+                        e.getMessage(),
+                        Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(InvalidMonitoredServiceHealthEndpointException.class)
+    public ResponseEntity<ApiError> handleInvalidMonitoredServiceHealthEndpointException(
+            InvalidMonitoredServiceHealthEndpointException e){
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                new ApiError(
+                        HttpStatus.BAD_REQUEST.value(),
                         e.getMessage(),
                         Map.of()
                 )
