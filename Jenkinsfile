@@ -1,6 +1,10 @@
 pipeline {
     agent {
-            label 'windows-docker'
+        label 'windows-docker'
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
     }
 
     tools {
@@ -14,6 +18,11 @@ pipeline {
                     bat 'mvnw.cmd test'
                 }
             }
+        }
+    }
+    post {
+        always {
+            junit 'backend/target/surefire-reports/*.xml'
         }
     }
 }
