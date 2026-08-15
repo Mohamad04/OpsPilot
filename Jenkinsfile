@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+            label 'windows-docker'
+    }
 
     tools {
         jdk 'JDK21'
