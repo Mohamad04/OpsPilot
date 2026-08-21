@@ -70,6 +70,7 @@ export default function AddServicePage() {
             <h1>Add Service</h1>
 
             <form
+                className="standard-form"
                 onSubmit={handleSubmit(onSubmit)}
                 noValidate
             >
@@ -85,7 +86,7 @@ export default function AddServicePage() {
                     />
 
                     {errors.name && (
-                        <p>{errors.name.message}</p>
+                        <p className="validation-error">{errors.name.message}</p>
                     )}
                 </div>
 
@@ -135,7 +136,7 @@ export default function AddServicePage() {
                     </select>
 
                     {errors.environment && (
-                        <p>
+                        <p className="validation-error">
                             {errors.environment.message}
                         </p>
                     )}
@@ -153,7 +154,7 @@ export default function AddServicePage() {
                     />
 
                     {errors.baseUrl && (
-                        <p>
+                        <p className="validation-error">
                             {errors.baseUrl.message}
                         </p>
                     )}
@@ -171,7 +172,7 @@ export default function AddServicePage() {
                     />
 
                     {errors.healthEndpoint && (
-                        <p>
+                        <p className="validation-error">
                             {errors.healthEndpoint.message}
                         </p>
                     )}
@@ -189,7 +190,7 @@ export default function AddServicePage() {
                     />
 
                     {errors.owner && (
-                        <p>{errors.owner.message}</p>
+                        <p className="validation-error">{errors.owner.message}</p>
                     )}
                 </div>
 
