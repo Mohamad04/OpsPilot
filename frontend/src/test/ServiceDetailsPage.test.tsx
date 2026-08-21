@@ -5,7 +5,6 @@ import {MemoryRouter, Route, Routes} from "react-router";
 import ServiceDetailsPage from "../pages/ServiceDetailsPage";
 import {getMonitoredService , enableMonitoredService , disableMonitoredService} from "../api/monitoredServiceApi";
 import type {MonitoredService} from "../types/MonitoredService";
-import AppLayout from "../layouts/AppLayout.tsx";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../api/monitoredServiceApi", () => ({
