@@ -4,6 +4,7 @@ import com.opspilot.backend.application.exception.MonitoredServiceNotFoundExcept
 import com.opspilot.backend.application.exception.OrganisationNotFoundException;
 import com.opspilot.backend.domain.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -25,6 +26,19 @@ public class MonitoredServicesServiceTest {
 
     @Mock
     OrganisationRepository organisationRepository;
+
+    @Mock
+    AuthenticatedUserService authenticatedUserService;
+
+    @Mock
+    OrganisationMembershipService organisationMembershipService;
+
+    @BeforeEach
+    void authenticatedUser() {
+        User user = mock(User.class);
+        lenient().when(user.getId()).thenReturn(UUID.randomUUID());
+        when(authenticatedUserService.findByIdentityProviderSubject("user")).thenReturn(user);
+    }
 
     @InjectMocks
     MonitoredServicesService monitoredServicesService;
@@ -54,7 +68,7 @@ public class MonitoredServicesServiceTest {
 
         MonitoredService result =
                 monitoredServicesService.createMonitoredService(
-                        organisationId,
+                        "user", organisationId,
                         "Payment API",
                         ServiceType.HTTP,
                         Environment.DEVELOPMENT,
@@ -87,7 +101,7 @@ public class MonitoredServicesServiceTest {
         assertThrows(
                 OrganisationNotFoundException.class,
                 () -> monitoredServicesService.createMonitoredService(
-                        organisationId,
+                        "user", organisationId,
                         "Payment API",
                         ServiceType.HTTP,
                         Environment.DEVELOPMENT,
@@ -116,7 +130,7 @@ public class MonitoredServicesServiceTest {
                 .thenReturn(Optional.of(monitoredService));
 
         MonitoredService result = monitoredServicesService.findById(
-                organisationId, monitoredServiceId);
+                "user", organisationId, monitoredServiceId);
 
         assertSame(monitoredService, result);
         verify(monitoredServiceRepository).findByIdAndOrganisationId(
@@ -135,7 +149,7 @@ public class MonitoredServicesServiceTest {
         MonitoredServiceNotFoundException exception = assertThrows(
                 MonitoredServiceNotFoundException.class,
                 () -> monitoredServicesService.findById(
-                        organisationId, monitoredServiceId));
+                        "user", organisationId, monitoredServiceId));
 
         assertTrue(exception.getMessage().contains(monitoredServiceId.toString()));
         verify(monitoredServiceRepository).findByIdAndOrganisationId(
@@ -156,7 +170,7 @@ public class MonitoredServicesServiceTest {
                 .thenReturn(monitoredService);
 
         MonitoredService result = monitoredServicesService.disable(
-                organisationId, monitoredServiceId);
+                "user", organisationId, monitoredServiceId);
 
         assertSame(monitoredService, result);
         assertFalse(result.isEnabled());
@@ -176,7 +190,7 @@ public class MonitoredServicesServiceTest {
 
         assertThrows(MonitoredServiceNotFoundException.class,
                 () -> monitoredServicesService.disable(
-                        organisationId, monitoredServiceId));
+                        "user", organisationId, monitoredServiceId));
 
         verify(monitoredServiceRepository).findByIdAndOrganisationId(
                 monitoredServiceId, organisationId);
@@ -199,7 +213,7 @@ public class MonitoredServicesServiceTest {
                 .thenReturn(monitoredService);
 
         MonitoredService result = monitoredServicesService.enable(
-                organisationId, monitoredServiceId);
+                "user", organisationId, monitoredServiceId);
 
         assertSame(monitoredService, result);
         assertTrue(result.isEnabled());
@@ -219,7 +233,7 @@ public class MonitoredServicesServiceTest {
 
         assertThrows(MonitoredServiceNotFoundException.class,
                 () -> monitoredServicesService.enable(
-                        organisationId, monitoredServiceId));
+                        "user", organisationId, monitoredServiceId));
 
         verify(monitoredServiceRepository).findByIdAndOrganisationId(
                 monitoredServiceId, organisationId);
@@ -242,7 +256,7 @@ public class MonitoredServicesServiceTest {
                 .thenReturn(List.of(service1, service2));
 
         List<MonitoredService> result =
-                monitoredServicesService.getAllByOrganisationId(organisationId);
+                monitoredServicesService.getAllByOrganisationId("user", organisationId);
 
         assertEquals(2, result.size());
         assertSame(service1, result.get(0));
@@ -261,7 +275,7 @@ public class MonitoredServicesServiceTest {
                 .thenReturn(List.of());
 
         List<MonitoredService> result =
-                monitoredServicesService.getAllByOrganisationId(organisationId);
+                monitoredServicesService.getAllByOrganisationId("user", organisationId);
 
         assertTrue(result.isEmpty());
 

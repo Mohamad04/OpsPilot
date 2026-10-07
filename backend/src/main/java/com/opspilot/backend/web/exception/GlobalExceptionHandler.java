@@ -1,6 +1,7 @@
 package com.opspilot.backend.web.exception;
 
 import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
+import com.opspilot.backend.application.exception.InsufficientOrganisationPermissionException;
 import com.opspilot.backend.application.exception.OrganisationNotFoundException;
 import com.opspilot.backend.application.exception.OrganisationSlugAlreadyExistsException;
 import com.opspilot.backend.domain.exception.*;
@@ -18,6 +19,14 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(InsufficientOrganisationPermissionException.class)
+    public ResponseEntity<ApiError> handleInsufficientOrganisationPermission(
+            InsufficientOrganisationPermissionException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                new ApiError(HttpStatus.FORBIDDEN.value(), e.getMessage(), Map.of())
+        );
+    }
 
     @ExceptionHandler(OrganisationSlugAlreadyExistsException.class)
     public ResponseEntity<ApiError> handleException(

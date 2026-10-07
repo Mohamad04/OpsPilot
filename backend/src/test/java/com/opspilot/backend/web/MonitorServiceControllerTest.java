@@ -77,7 +77,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.createMonitoredService(
-                        eq(organisationId),
+                        eq("user"), eq(organisationId),
                         eq("Payment API"),
                         eq(ServiceType.HTTP),
                         eq(Environment.DEVELOPMENT),
@@ -211,7 +211,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.createMonitoredService(
-                        organisationId,
+                        "user", organisationId,
                         "Payment API",
                         ServiceType.HTTP,
                         Environment.DEVELOPMENT,
@@ -255,7 +255,7 @@ public class MonitorServiceControllerTest {
 
         verify(monitoredServicesService)
                 .createMonitoredService(
-                        organisationId,
+                        "user", organisationId,
                         "Payment API",
                         ServiceType.HTTP,
                         Environment.DEVELOPMENT,
@@ -294,7 +294,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService
-                        .getAllByOrganisationId(organisationId)
+                        .getAllByOrganisationId("user", organisationId)
         ).thenReturn(
                 List.of(
                         monitoredService,
@@ -330,7 +330,7 @@ public class MonitorServiceControllerTest {
                 );
 
         verify(monitoredServicesService)
-                .getAllByOrganisationId(organisationId);
+                .getAllByOrganisationId("user", organisationId);
     }
 
     @Test
@@ -342,7 +342,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService
-                        .getAllByOrganisationId(organisationId)
+                        .getAllByOrganisationId("user", organisationId)
         ).thenReturn(List.of());
 
         mockMvc.perform(
@@ -377,7 +377,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.findById(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 )
         ).thenReturn(monitoredService);
@@ -415,7 +415,7 @@ public class MonitorServiceControllerTest {
 
         verify(monitoredServicesService)
                 .findById(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 );
     }
@@ -432,7 +432,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.findById(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 )
         ).thenThrow(
@@ -464,7 +464,7 @@ public class MonitorServiceControllerTest {
 
         verify(monitoredServicesService)
                 .findById(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 );
     }
@@ -488,7 +488,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.enable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 )
         ).thenReturn(monitoredService);
@@ -511,7 +511,7 @@ public class MonitorServiceControllerTest {
 
         verify(monitoredServicesService)
                 .enable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 );
     }
@@ -535,7 +535,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.disable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 )
         ).thenReturn(monitoredService);
@@ -558,7 +558,7 @@ public class MonitorServiceControllerTest {
 
         verify(monitoredServicesService)
                 .disable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 );
     }
@@ -575,7 +575,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.enable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 )
         ).thenThrow(
@@ -606,7 +606,7 @@ public class MonitorServiceControllerTest {
 
         verify(monitoredServicesService)
                 .enable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 );
     }
@@ -623,7 +623,7 @@ public class MonitorServiceControllerTest {
 
         when(
                 monitoredServicesService.disable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 )
         ).thenThrow(
@@ -654,7 +654,7 @@ public class MonitorServiceControllerTest {
 
         verify(monitoredServicesService)
                 .disable(
-                        organisationId,
+                        "user", organisationId,
                         monitoredServiceId
                 );
     }

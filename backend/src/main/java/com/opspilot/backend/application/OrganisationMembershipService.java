@@ -47,6 +47,16 @@ public class OrganisationMembershipService {
                 );
     }
 
+    public void requireMonitoredServiceWritePermission(UUID organisationId, UUID userId) {
+        OrganisationMembership membership = requireMembership(organisationId, userId);
+        switch (membership.getRole()) {
+            case OWNER, ADMIN, ENGINEER -> { }
+            case VIEWER -> throw new InsufficientOrganisationPermissionException(
+                    "VIEWER cannot modify monitored services"
+            );
+        }
+    }
+
     public List<OrganisationMembership> getOrganisationMembers(
             UUID organisationId
     ) {
