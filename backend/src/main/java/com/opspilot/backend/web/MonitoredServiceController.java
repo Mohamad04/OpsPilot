@@ -1,11 +1,20 @@
 package com.opspilot.backend.web;
 
+import com.opspilot.backend.application.AuthenticatedUserService;
 import com.opspilot.backend.application.MonitoredServicesService;
+import com.opspilot.backend.application.OrganisationMembershipService;
+import com.opspilot.backend.application.exception.ForbiddenException;
+import com.opspilot.backend.application.exception.OrganisationMembershipNotFoundException;
 import com.opspilot.backend.domain.MonitoredService;
+import com.opspilot.backend.domain.Organisation;
+import com.opspilot.backend.domain.OrganisationMembership;
+import com.opspilot.backend.domain.User;
 import com.opspilot.backend.web.dto.CreateMonitoredServiceRequest;
 import com.opspilot.backend.web.dto.MonitoredServiceResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,10 +23,16 @@ import java.util.UUID;
 @RestController
 public class MonitoredServiceController {
 
+    private final AuthenticatedUserService authenticatedUserService;
     private final MonitoredServicesService monitoredServicesService;
+    private final OrganisationMembershipService organisationMembershipService;
 
-    public MonitoredServiceController(MonitoredServicesService monitoredServicesService) {
+    public MonitoredServiceController(MonitoredServicesService monitoredServicesService,
+                                      AuthenticatedUserService authenticatedUserService,
+                                      OrganisationMembershipService organisationMembershipService) {
+        this.authenticatedUserService = authenticatedUserService;
         this.monitoredServicesService = monitoredServicesService;
+        this.organisationMembershipService = organisationMembershipService;
     }
 
     @PostMapping("/api/organisations/{organisationId}/monitored-services")
@@ -58,7 +73,20 @@ public class MonitoredServiceController {
 
     @GetMapping("/api/organisations/{organisationId}/monitored-services")
     public List<MonitoredServiceResponse> getAllMonitoredServices(
-            @PathVariable UUID organisationId) {
+            @PathVariable UUID organisationId,
+            @AuthenticationPrincipal Jwt jwt) {
+        String subject = jwt.getSubject();
+
+        User currentUser =
+                authenticatedUserService
+                        .findByIdentityProviderSubject(subject);
+        OrganisationMembership membership =
+                organisationMembershipService
+                        .requireMembership(organisationId,
+                                currentUser.getId());
+        if(membership == null){
+            throw new ForbiddenException("Membership not found");
+        }
 
         return monitoredServicesService
                 .getAllByOrganisationId(organisationId)

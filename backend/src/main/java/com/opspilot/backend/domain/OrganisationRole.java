@@ -1,6 +1,6 @@
 package com.opspilot.backend.domain;
 
-public enum UserRoles {
+public enum OrganisationRole {
     OWNER,
     ADMIN,
     ENGINEER,

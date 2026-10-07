@@ -1,4 +1,6 @@
 package com.opspilot.backend.domain;
 
-public class UserStatus {
+public enum UserStatus {
+    ACTIVE,
+    INACTIVE
 }
