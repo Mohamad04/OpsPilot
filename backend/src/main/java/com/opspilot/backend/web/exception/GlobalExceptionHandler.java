@@ -2,6 +2,10 @@ package com.opspilot.backend.web.exception;
 
 import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
 import com.opspilot.backend.application.exception.InsufficientOrganisationPermissionException;
+import com.opspilot.backend.application.exception.ForbiddenException;
+import com.opspilot.backend.application.exception.OrganisationMembershipAlreadyExistsException;
+import com.opspilot.backend.application.exception.OrganisationMembershipNotFoundException;
+import com.opspilot.backend.application.exception.UserNotFoundException;
 import com.opspilot.backend.application.exception.OrganisationNotFoundException;
 import com.opspilot.backend.application.exception.OrganisationSlugAlreadyExistsException;
 import com.opspilot.backend.domain.exception.*;
@@ -13,6 +17,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -20,11 +25,40 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(InsufficientOrganisationPermissionException.class)
+    @ExceptionHandler({InsufficientOrganisationPermissionException.class, ForbiddenException.class})
     public ResponseEntity<ApiError> handleInsufficientOrganisationPermission(
-            InsufficientOrganisationPermissionException e) {
+            RuntimeException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                 new ApiError(HttpStatus.FORBIDDEN.value(), e.getMessage(), Map.of())
+        );
+    }
+
+    @ExceptionHandler(OrganisationMembershipNotFoundException.class)
+    public ResponseEntity<ApiError> handleMembershipNotFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ApiError(HttpStatus.NOT_FOUND.value(), "Organisation membership not found", Map.of())
+        );
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiError> handleUserNotFound() {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ApiError(HttpStatus.NOT_FOUND.value(), "User not found", Map.of())
+        );
+    }
+
+    @ExceptionHandler(OrganisationMembershipAlreadyExistsException.class)
+    public ResponseEntity<ApiError> handleMembershipAlreadyExists(
+            OrganisationMembershipAlreadyExistsException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new ApiError(HttpStatus.CONFLICT.value(), e.getMessage(), Map.of())
+        );
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleArgumentTypeMismatch() {
+        return ResponseEntity.badRequest().body(
+                new ApiError(HttpStatus.BAD_REQUEST.value(), "Invalid request parameter", Map.of())
         );
     }
 

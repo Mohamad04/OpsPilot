@@ -7,6 +7,7 @@ import com.opspilot.backend.application.OrganisationService;
 import com.opspilot.backend.config.SecurityConfig;
 import com.opspilot.backend.domain.*;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -15,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.BadJwtException;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -50,6 +53,7 @@ class MonitoredServiceAuthorizationTest {
     @MockitoBean OrganisationRepository organisationRepository;
     @MockitoBean MonitoredServiceRepository serviceRepository;
     @MockitoBean OrganisationService organisationService;
+    @MockitoBean JwtDecoder jwtDecoder;
 
     private User user;
     private Organisation organisation;
@@ -92,7 +96,11 @@ class MonitoredServiceAuthorizationTest {
         member(OrganisationRole.OWNER);
         mockMvc.perform(request(operation, OTHER_ORGANISATION_ID)
                         .with(jwt().jwt(token -> token.subject(SUBJECT))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Organisation membership not found"))
+                .andExpect(jsonPath("$.errors").isEmpty());
         verify(userRepository).findByIdentityProviderSubject(SUBJECT);
         verify(membershipRepository).findByOrganisationIdAndUserId(OTHER_ORGANISATION_ID, USER_ID);
         verifyNoInteractions(serviceRepository, organisationRepository);
@@ -135,7 +143,11 @@ class MonitoredServiceAuthorizationTest {
     void viewerCannotMutate(String operation) throws Exception {
         member(OrganisationRole.VIEWER);
         mockMvc.perform(request(operation, ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
-                .andExpect(status().isForbidden()).andExpect(jsonPath("$.status").value(403));
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("VIEWER cannot modify monitored services"))
+                .andExpect(jsonPath("$.errors").isEmpty());
         verifyNoInteractions(serviceRepository, organisationRepository);
     }
 
@@ -146,7 +158,7 @@ class MonitoredServiceAuthorizationTest {
         when(serviceRepository.findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID))
                 .thenReturn(Optional.empty());
         mockMvc.perform(request(operation, ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
         verify(serviceRepository).findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID);
         verify(serviceRepository, never()).findById(any());
         verify(serviceRepository, never()).save(any());
@@ -155,7 +167,73 @@ class MonitoredServiceAuthorizationTest {
     @ParameterizedTest
     @ValueSource(strings = {"list", "read", "create", "enable", "disable"})
     void everyOperationRequiresAuthentication(String operation) throws Exception {
-        mockMvc.perform(request(operation, ORGANISATION_ID)).andExpect(status().isUnauthorized());
+        mockMvc.perform(request(operation, ORGANISATION_ID))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("Authentication required"))
+                .andExpect(jsonPath("$.errors").isEmpty());
         verifyNoInteractions(userRepository, membershipRepository, serviceRepository, organisationRepository);
+    }
+
+    @Test
+    void invalidBearerTokenReturnsGenericJsonWithoutDecoderDetails() throws Exception {
+        when(jwtDecoder.decode("invalid-token"))
+                .thenThrow(new BadJwtException("Sensitive JWT signature/issuer details"));
+        mockMvc.perform(request("list", ORGANISATION_ID).header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                .andExpect(content().json("""
+                        {"status":401,"message":"Authentication required","errors":{}}
+                        """));
+        verifyNoInteractions(userRepository, membershipRepository, serviceRepository, organisationRepository);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"list", "read", "create", "enable", "disable"})
+    void authenticatedIdentityWithoutLocalUserReturnsNotFound(String operation) throws Exception {
+        when(userRepository.findByIdentityProviderSubject(SUBJECT)).thenReturn(Optional.empty());
+        mockMvc.perform(request(operation, ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
+                .andExpect(status().isNotFound())
+                .andExpect(content().json("""
+                        {"status":404,"message":"User not found","errors":{}}
+                        """));
+        verifyNoInteractions(membershipRepository, serviceRepository, organisationRepository);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"enable", "disable"})
+    void repeatingStatusChangeReturnsConflictWithoutSaving(String operation) throws Exception {
+        member(OrganisationRole.ENGINEER);
+        when(serviceRepository.findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID))
+                .thenReturn(Optional.of(service(operation.equals("enable"))));
+        mockMvc.perform(request(operation, ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("Monitored Service is already "
+                        + (operation.equals("enable") ? "enabled" : "disabled")));
+        verify(serviceRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "{", "{\"serviceType\":\"UNKNOWN\"}"})
+    void invalidCreateRequestReturnsBadRequestBeforeBusinessLogic(String body) throws Exception {
+        mockMvc.perform(request("create", ORGANISATION_ID).content(body)
+                        .with(jwt().jwt(token -> token.subject(SUBJECT))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+        verifyNoInteractions(userRepository, membershipRepository, serviceRepository, organisationRepository);
+    }
+
+    @Test
+    void domainInvalidHealthEndpointReturnsBadRequestWithoutSaving() throws Exception {
+        member(OrganisationRole.ADMIN);
+        when(organisationRepository.findById(ORGANISATION_ID)).thenReturn(Optional.of(organisation));
+        mockMvc.perform(request("create", ORGANISATION_ID).content(CREATE_REQUEST.replace("/health", "//health"))
+                        .with(jwt().jwt(token -> token.subject(SUBJECT))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value(
+                        "Health endpoint must be an absolute path starting with a single '/'."));
+        verifyNoInteractions(serviceRepository);
     }
 }
