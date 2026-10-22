@@ -5,6 +5,7 @@ import com.opspilot.backend.application.exception.OrganisationMembershipAlreadyE
 import com.opspilot.backend.application.exception.OrganisationMembershipNotFoundException;
 import com.opspilot.backend.application.exception.UserNotFoundException;
 import com.opspilot.backend.domain.*;
+import com.opspilot.backend.web.dto.OrganisationResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,17 +18,48 @@ public class OrganisationMembershipService {
     private final OrganisationMembershipRepository organisationMembershipRepository;
     private final OrganisationService organisationService;
     private final UserRepository userRepository;
+    private final AuthenticatedUserService authenticatedUserService;
 
     public OrganisationMembershipService(
             OrganisationMembershipRepository organisationMembershipRepository,
             OrganisationService organisationService,
             UserRepository userRepository,
-            OrganisationRepository organisationRepository
+            OrganisationRepository organisationRepository,
+            AuthenticatedUserService authenticatedUserService
     ) {
         this.organisationMembershipRepository =
                 organisationMembershipRepository;
         this.organisationService = organisationService;
         this.userRepository = userRepository;
+        this.authenticatedUserService = authenticatedUserService;
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrganisationResponse> getOrganisations(String subject) {
+        User user = authenticatedUserService.findByIdentityProviderSubject(subject);
+        return organisationMembershipRepository.findAllWithOrganisationByUserId(user.getId())
+                .stream()
+                .map(membership -> toOrganisationResponse(membership.getOrganisation()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrganisationResponse getOrganisation(String subject, UUID organisationId) {
+        User user = authenticatedUserService.findByIdentityProviderSubject(subject);
+        OrganisationMembership membership = requireMembership(organisationId, user.getId());
+        return toOrganisationResponse(membership.getOrganisation());
+    }
+
+    @Transactional
+    public OrganisationResponse createOrganisationWithOwner(String subject, String name, String slug) {
+        User owner = authenticatedUserService.findByIdentityProviderSubject(subject);
+        OrganisationMembership membership = createOrganisationWithOwner(name, slug, owner);
+        return toOrganisationResponse(membership.getOrganisation());
+    }
+
+    private OrganisationResponse toOrganisationResponse(Organisation organisation) {
+        return new OrganisationResponse(organisation.getId(), organisation.getName(), organisation.getSlug(),
+                organisation.getStatus(), organisation.getCreatedAt());
     }
 
 

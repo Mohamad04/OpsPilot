@@ -114,9 +114,11 @@ class MonitoredServiceAuthorizationTest {
         when(serviceRepository.findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID))
                 .thenReturn(Optional.of(service(true)));
         mockMvc.perform(request("list", ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
-                .andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("Payment API"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].name").value("Payment API"))
+                .andExpect(jsonPath("$[0].length()").value(9));
         mockMvc.perform(request("read", ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.organisationId").value(ORGANISATION_ID.toString()));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.organisationId").value(ORGANISATION_ID.toString()))
+                .andExpect(jsonPath("$.length()").value(9));
     }
 
     @ParameterizedTest
@@ -134,6 +136,7 @@ class MonitoredServiceAuthorizationTest {
         when(serviceRepository.save(any(MonitoredService.class))).thenAnswer(call -> call.getArgument(0));
         mockMvc.perform(request(operation, ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
                 .andExpect(status().is(operation.equals("create") ? 201 : 200))
+                .andExpect(jsonPath("$.length()").value(9))
                 .andExpect(jsonPath("$.enabled").value(!operation.equals("disable")));
         verify(serviceRepository).save(any(MonitoredService.class));
     }

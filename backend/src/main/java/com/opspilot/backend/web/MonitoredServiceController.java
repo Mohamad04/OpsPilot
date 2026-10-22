@@ -1,7 +1,6 @@
 package com.opspilot.backend.web;
 
 import com.opspilot.backend.application.MonitoredServicesService;
-import com.opspilot.backend.domain.MonitoredService;
 import com.opspilot.backend.web.dto.CreateMonitoredServiceRequest;
 import com.opspilot.backend.web.dto.MonitoredServiceResponse;
 import jakarta.validation.Valid;
@@ -29,8 +28,7 @@ public class MonitoredServiceController {
             @PathVariable UUID organisationId,
             @AuthenticationPrincipal Jwt jwt) {
 
-        MonitoredService monitoredService =
-                monitoredServicesService.createMonitoredService(
+        return monitoredServicesService.createMonitoredService(
                         jwt.getSubject(),
                         organisationId,
                         request.name(),
@@ -40,24 +38,6 @@ public class MonitoredServiceController {
                         request.healthEndpoint(),
                         request.owner()
                 );
-
-        return toResponse(monitoredService);
-    }
-
-    private MonitoredServiceResponse toResponse(
-            MonitoredService monitoredService) {
-
-        return new MonitoredServiceResponse(
-                monitoredService.getId(),
-                monitoredService.getOrganisation().getId(),
-                monitoredService.getName(),
-                monitoredService.getServiceType(),
-                monitoredService.getEnvironment(),
-                monitoredService.getBaseUrl(),
-                monitoredService.getHealthEndpoint(),
-                monitoredService.getOwner(),
-                monitoredService.isEnabled()
-        );
     }
 
     @GetMapping("/api/organisations/{organisationId}/monitored-services")
@@ -65,10 +45,7 @@ public class MonitoredServiceController {
             @PathVariable UUID organisationId,
             @AuthenticationPrincipal Jwt jwt) {
         return monitoredServicesService
-                .getAllByOrganisationId(jwt.getSubject(), organisationId)
-                .stream()
-                .map(this::toResponse)
-                .toList();
+                .getAllByOrganisationId(jwt.getSubject(), organisationId);
     }
 
     @GetMapping("/api/organisations/{organisationId}/monitored-services/{monitoredServiceId}")
@@ -76,9 +53,8 @@ public class MonitoredServiceController {
             @PathVariable UUID organisationId,
             @PathVariable UUID monitoredServiceId,
             @AuthenticationPrincipal Jwt jwt) {
-        MonitoredService monitoredService = monitoredServicesService
+        return monitoredServicesService
                 .findById(jwt.getSubject(), organisationId, monitoredServiceId);
-        return toResponse(monitoredService);
     }
 
     @PatchMapping("/api/organisations/{organisationId}/monitored-services/{monitoredServiceId}/enable")
@@ -87,14 +63,11 @@ public class MonitoredServiceController {
             @PathVariable UUID monitoredServiceId,
             @AuthenticationPrincipal Jwt jwt) {
 
-        MonitoredService monitoredService =
-                monitoredServicesService.enable(
+        return monitoredServicesService.enable(
                         jwt.getSubject(),
                         organisationId,
                         monitoredServiceId
                 );
-
-        return toResponse(monitoredService);
     }
 
     @PatchMapping("/api/organisations/{organisationId}/monitored-services/{monitoredServiceId}/disable")
@@ -103,13 +76,10 @@ public class MonitoredServiceController {
             @PathVariable UUID monitoredServiceId,
             @AuthenticationPrincipal Jwt jwt) {
 
-        MonitoredService monitoredService =
-                monitoredServicesService.disable(
+        return monitoredServicesService.disable(
                         jwt.getSubject(),
                         organisationId,
                         monitoredServiceId
                 );
-
-        return toResponse(monitoredService);
     }
 }

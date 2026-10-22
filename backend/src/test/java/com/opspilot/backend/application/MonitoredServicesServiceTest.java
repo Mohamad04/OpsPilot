@@ -3,6 +3,7 @@ package com.opspilot.backend.application;
 import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
 import com.opspilot.backend.application.exception.OrganisationNotFoundException;
 import com.opspilot.backend.domain.*;
+import com.opspilot.backend.web.dto.MonitoredServiceResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -66,7 +67,7 @@ public class MonitoredServicesServiceTest {
         when(monitoredServiceRepository.save(any(MonitoredService.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        MonitoredService result =
+        MonitoredServiceResponse result =
                 monitoredServicesService.createMonitoredService(
                         "user", organisationId,
                         "Payment API",
@@ -77,14 +78,14 @@ public class MonitoredServicesServiceTest {
                         "Payments Team"
                 );
 
-        assertSame(organisation, result.getOrganisation());
-        assertEquals("Payment API", result.getName());
-        assertEquals(ServiceType.HTTP, result.getServiceType());
-        assertEquals(Environment.DEVELOPMENT, result.getEnvironment());
-        assertEquals("https://payment.example.com", result.getBaseUrl());
-        assertEquals("/health", result.getHealthEndpoint());
-        assertEquals("Payments Team", result.getOwner());
-        assertTrue(result.isEnabled());
+        assertEquals(organisation.getId(), result.organisationId());
+        assertEquals("Payment API", result.name());
+        assertEquals(ServiceType.HTTP, result.serviceType());
+        assertEquals(Environment.DEVELOPMENT, result.environment());
+        assertEquals("https://payment.example.com", result.baseUrl());
+        assertEquals("/health", result.healthEndpoint());
+        assertEquals("Payments Team", result.owner());
+        assertTrue(result.enabled());
 
         verify(organisationRepository).findById(organisationId);
         verify(monitoredServiceRepository).save(any(MonitoredService.class));
@@ -129,10 +130,10 @@ public class MonitoredServicesServiceTest {
                 monitoredServiceId, organisationId))
                 .thenReturn(Optional.of(monitoredService));
 
-        MonitoredService result = monitoredServicesService.findById(
+        MonitoredServiceResponse result = monitoredServicesService.findById(
                 "user", organisationId, monitoredServiceId);
 
-        assertSame(monitoredService, result);
+        assertEquals("Payment API", result.name());
         verify(monitoredServiceRepository).findByIdAndOrganisationId(
                 monitoredServiceId, organisationId);
     }
@@ -169,11 +170,11 @@ public class MonitoredServicesServiceTest {
         when(monitoredServiceRepository.save(monitoredService))
                 .thenReturn(monitoredService);
 
-        MonitoredService result = monitoredServicesService.disable(
+        MonitoredServiceResponse result = monitoredServicesService.disable(
                 "user", organisationId, monitoredServiceId);
 
-        assertSame(monitoredService, result);
-        assertFalse(result.isEnabled());
+        assertEquals("Payment API", result.name());
+        assertFalse(result.enabled());
         verify(monitoredServiceRepository).findByIdAndOrganisationId(
                 monitoredServiceId, organisationId);
         verify(monitoredServiceRepository).save(monitoredService);
@@ -212,11 +213,11 @@ public class MonitoredServicesServiceTest {
         when(monitoredServiceRepository.save(monitoredService))
                 .thenReturn(monitoredService);
 
-        MonitoredService result = monitoredServicesService.enable(
+        MonitoredServiceResponse result = monitoredServicesService.enable(
                 "user", organisationId, monitoredServiceId);
 
-        assertSame(monitoredService, result);
-        assertTrue(result.isEnabled());
+        assertEquals("Payment API", result.name());
+        assertTrue(result.enabled());
         verify(monitoredServiceRepository).findByIdAndOrganisationId(
                 monitoredServiceId, organisationId);
         verify(monitoredServiceRepository).save(monitoredService);
@@ -255,12 +256,12 @@ public class MonitoredServicesServiceTest {
         when(monitoredServiceRepository.findAllByOrganisationId(organisationId))
                 .thenReturn(List.of(service1, service2));
 
-        List<MonitoredService> result =
+        List<MonitoredServiceResponse> result =
                 monitoredServicesService.getAllByOrganisationId("user", organisationId);
 
         assertEquals(2, result.size());
-        assertSame(service1, result.get(0));
-        assertSame(service2, result.get(1));
+        assertEquals("Payment API", result.get(0).name());
+        assertEquals("Payment API", result.get(1).name());
 
         verify(monitoredServiceRepository)
                 .findAllByOrganisationId(organisationId);
@@ -274,7 +275,7 @@ public class MonitoredServicesServiceTest {
         when(monitoredServiceRepository.findAllByOrganisationId(organisationId))
                 .thenReturn(List.of());
 
-        List<MonitoredService> result =
+        List<MonitoredServiceResponse> result =
                 monitoredServicesService.getAllByOrganisationId("user", organisationId);
 
         assertTrue(result.isEmpty());

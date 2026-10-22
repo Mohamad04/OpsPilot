@@ -5,8 +5,7 @@ import com.opspilot.backend.application.exception.MonitoredServiceNotFoundExcept
 import com.opspilot.backend.application.exception.OrganisationNotFoundException;
 import com.opspilot.backend.config.SecurityConfig;
 import com.opspilot.backend.domain.Environment;
-import com.opspilot.backend.domain.MonitoredService;
-import com.opspilot.backend.domain.Organisation;
+import com.opspilot.backend.web.dto.MonitoredServiceResponse;
 import com.opspilot.backend.domain.ServiceType;
 import com.opspilot.backend.domain.exception.MonitoredServiceAlreadyInStatusException;
 import org.junit.jupiter.api.Test;
@@ -38,26 +37,14 @@ public class MonitorServiceControllerTest {
     @MockitoBean
     MonitoredServicesService monitoredServicesService;
 
-    private MonitoredService createValidMonitoredService(
+    private MonitoredServiceResponse createValidMonitoredService(
             UUID organisationId,
             UUID monitoredServiceId,
             boolean enabled
     ) {
-        Organisation organisation = mock(Organisation.class);
-        when(organisation.getId()).thenReturn(organisationId);
-
-        MonitoredService monitoredService = mock(MonitoredService.class);
-        when(monitoredService.getId()).thenReturn(monitoredServiceId);
-        when(monitoredService.getOrganisation()).thenReturn(organisation);
-        when(monitoredService.getName()).thenReturn("Payment API");
-        when(monitoredService.getServiceType()).thenReturn(ServiceType.HTTP);
-        when(monitoredService.getEnvironment()).thenReturn(Environment.DEVELOPMENT);
-        when(monitoredService.getBaseUrl()).thenReturn("https://payment.example.com");
-        when(monitoredService.getHealthEndpoint()).thenReturn("/health");
-        when(monitoredService.getOwner()).thenReturn("Payments Team");
-        when(monitoredService.isEnabled()).thenReturn(enabled);
-
-        return monitoredService;
+        return new MonitoredServiceResponse(monitoredServiceId, organisationId, "Payment API",
+                ServiceType.HTTP, Environment.DEVELOPMENT, "https://payment.example.com",
+                "/health", "Payments Team", enabled);
     }
 
     @Test
@@ -68,7 +55,7 @@ public class MonitorServiceControllerTest {
         UUID monitoredServiceId =
                 UUID.fromString("00000000-0000-0000-0000-000000000002");
 
-        MonitoredService monitoredService =
+        MonitoredServiceResponse monitoredService =
                 createValidMonitoredService(
                         organisationId,
                         monitoredServiceId,
@@ -278,14 +265,14 @@ public class MonitorServiceControllerTest {
         UUID secondMonitoredServiceId =
                 UUID.fromString("00000000-0000-0000-0000-000000000003");
 
-        MonitoredService monitoredService =
+        MonitoredServiceResponse monitoredService =
                 createValidMonitoredService(
                         organisationId,
                         monitoredServiceId,
                         true
                 );
 
-        MonitoredService monitoredService1 =
+        MonitoredServiceResponse monitoredService1 =
                 createValidMonitoredService(
                         organisationId,
                         secondMonitoredServiceId,
@@ -368,7 +355,7 @@ public class MonitorServiceControllerTest {
         UUID monitoredServiceId =
                 UUID.fromString("00000000-0000-0000-0000-000000000002");
 
-        MonitoredService monitoredService =
+        MonitoredServiceResponse monitoredService =
                 createValidMonitoredService(
                         organisationId,
                         monitoredServiceId,
@@ -479,7 +466,7 @@ public class MonitorServiceControllerTest {
         UUID monitoredServiceId =
                 UUID.fromString("00000000-0000-0000-0000-000000000002");
 
-        MonitoredService monitoredService =
+        MonitoredServiceResponse monitoredService =
                 createValidMonitoredService(
                         organisationId,
                         monitoredServiceId,
@@ -526,7 +513,7 @@ public class MonitorServiceControllerTest {
         UUID monitoredServiceId =
                 UUID.fromString("00000000-0000-0000-0000-000000000002");
 
-        MonitoredService monitoredService =
+        MonitoredServiceResponse monitoredService =
                 createValidMonitoredService(
                         organisationId,
                         monitoredServiceId,

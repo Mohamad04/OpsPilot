@@ -3,12 +3,15 @@ package com.opspilot.backend.application;
 import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
 import com.opspilot.backend.application.exception.OrganisationNotFoundException;
 import com.opspilot.backend.domain.*;
+import com.opspilot.backend.web.dto.MonitoredServiceResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@Transactional
 public class MonitoredServicesService {
     private final MonitoredServiceRepository monitoredServiceRepository;
     private final OrganisationRepository organisationRepository;
@@ -27,7 +30,7 @@ public class MonitoredServicesService {
         this.organisationMembershipService = organisationMembershipService;
     }
 
-    public MonitoredService createMonitoredService(String subject,
+    public MonitoredServiceResponse createMonitoredService(String subject,
                                                    UUID organisationId,
                                                    String name,
                                                    ServiceType serviceType,
@@ -42,15 +45,16 @@ public class MonitoredServicesService {
                 organisation, name, serviceType, environment,
                 baseUrl, healthEndpoint, owner);
 
-        return  monitoredServiceRepository.save(monitoredService);
+        return toResponse(monitoredServiceRepository.save(monitoredService));
     }
 
-    public MonitoredService findById(
+    @Transactional(readOnly = true)
+    public MonitoredServiceResponse findById(
             String subject,
             UUID organisationId,
             UUID monitoredServiceId) {
         requireMembership(subject, organisationId);
-        return findScopedService(organisationId, monitoredServiceId);
+        return toResponse(findScopedService(organisationId, monitoredServiceId));
     }
 
     private MonitoredService findScopedService(UUID organisationId, UUID monitoredServiceId) {
@@ -65,7 +69,7 @@ public class MonitoredServicesService {
                 );
     }
 
-    public MonitoredService disable(
+    public MonitoredServiceResponse disable(
             String subject,
             UUID organisationId,
             UUID monitoredServiceId) {
@@ -76,10 +80,10 @@ public class MonitoredServicesService {
 
         monitoredService.disable();
 
-        return monitoredServiceRepository.save(monitoredService);
+        return toResponse(monitoredServiceRepository.save(monitoredService));
     }
 
-    public MonitoredService enable(
+    public MonitoredServiceResponse enable(
             String subject,
             UUID organisationId,
             UUID monitoredServiceId) {
@@ -90,12 +94,20 @@ public class MonitoredServicesService {
 
         monitoredService.enable();
 
-        return monitoredServiceRepository.save(monitoredService);
+        return toResponse(monitoredServiceRepository.save(monitoredService));
     }
 
-    public List<MonitoredService> getAllByOrganisationId(String subject, UUID organisationId) {
+    @Transactional(readOnly = true)
+    public List<MonitoredServiceResponse> getAllByOrganisationId(String subject, UUID organisationId) {
         requireMembership(subject, organisationId);
-        return monitoredServiceRepository.findAllByOrganisationId(organisationId);
+        return monitoredServiceRepository.findAllByOrganisationId(organisationId)
+                .stream().map(this::toResponse).toList();
+    }
+
+    private MonitoredServiceResponse toResponse(MonitoredService service) {
+        return new MonitoredServiceResponse(service.getId(), service.getOrganisation().getId(),
+                service.getName(), service.getServiceType(), service.getEnvironment(), service.getBaseUrl(),
+                service.getHealthEndpoint(), service.getOwner(), service.isEnabled());
     }
 
     private OrganisationMembership requireMembership(String subject, UUID organisationId) {
