@@ -132,4 +132,14 @@ class OrganisationControllerTest {
                 .andExpect(jsonPath("$.status").value(401));
         verifyNoInteractions(organisationMembershipService);
     }
+
+    @Test
+    void unauthenticatedCreationIsRejectedBeforeMembershipCreation() throws Exception {
+        mockMvc.perform(post("/api/organisations").contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Team","slug":"team"}
+                                """))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.status").value(401));
+        verifyNoInteractions(organisationMembershipService);
+    }
 }

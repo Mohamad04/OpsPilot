@@ -10,4 +10,6 @@ public interface UserRepository extends ListCrudRepository<User , UUID> {
 
     Optional<User> findByIdentityProviderSubject(String identityProviderSubject);
 
+    boolean existsByEmailIgnoreCase(String email);
+
 }

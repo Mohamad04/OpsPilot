@@ -61,6 +61,7 @@ class MonitoredServiceAuthorizationTest {
     @BeforeEach
     void setUp() {
         user = mock(User.class);
+        when(user.getStatus()).thenReturn(UserStatus.ACTIVE);
         when(user.getId()).thenReturn(USER_ID);
         when(userRepository.findByIdentityProviderSubject(SUBJECT)).thenReturn(Optional.of(user));
         organisation = mock(Organisation.class);

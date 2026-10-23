@@ -19,7 +19,7 @@ export function OrganisationProvider({
 
     const query = useQuery({
         queryKey: ["organisations"],
-        queryFn: getAllOrganisations,
+        queryFn: ({ signal }) => getAllOrganisations(signal),
     });
 
     const organisationsPending = query.isPending;

@@ -1,10 +1,11 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { getMonitoredServices } from "../api/monitoredServiceApi";
 import { useOrganisation } from "../hooks/useOrganisation";
 
 function ServicesPage() {
+    const location = useLocation();
     const {
         currentOrganisation,
         organisationsPending,
@@ -31,6 +32,9 @@ function ServicesPage() {
 
     return (
         <div className="services-page">
+            {organisationId && location.state?.createdOrganisationId === organisationId && (
+                <p role="status">Organisation "{currentOrganisation.name}" created successfully.</p>
+            )}
             <div className="services-header">
                 <h1>Services</h1>
 
@@ -67,6 +71,7 @@ function ServicesPage() {
                 )}
 
                 {query.isSuccess && services.length > 0 && (
+                    <div className="table-scroll" role="region" aria-label="Monitored services" tabIndex={0}>
                     <table className="services-table">
                         <thead>
                         <tr>
@@ -94,14 +99,17 @@ function ServicesPage() {
                                 <td>{service.owner}</td>
 
                                 <td>
+                                    <span className={`status-indicator ${service.enabled ? "status-enabled" : "status-disabled"}`}>
                                     {service.enabled
                                         ? "Enabled"
                                         : "Disabled"}
+                                    </span>
                                 </td>
                             </tr>
                         ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
         </div>

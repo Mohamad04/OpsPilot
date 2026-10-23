@@ -3,6 +3,7 @@ package com.opspilot.backend.web.exception;
 import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
 import com.opspilot.backend.application.exception.InsufficientOrganisationPermissionException;
 import com.opspilot.backend.application.exception.ForbiddenException;
+import com.opspilot.backend.application.exception.UserProvisioningConflictException;
 import com.opspilot.backend.application.exception.OrganisationMembershipAlreadyExistsException;
 import com.opspilot.backend.application.exception.OrganisationMembershipNotFoundException;
 import com.opspilot.backend.application.exception.UserNotFoundException;
@@ -24,6 +25,12 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(UserProvisioningConflictException.class)
+    public ResponseEntity<ApiError> handleUserProvisioningConflict(UserProvisioningConflictException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                new ApiError(HttpStatus.CONFLICT.value(), exception.getMessage(), Map.of()));
+    }
 
     @ExceptionHandler({InsufficientOrganisationPermissionException.class, ForbiddenException.class})
     public ResponseEntity<ApiError> handleInsufficientOrganisationPermission(
