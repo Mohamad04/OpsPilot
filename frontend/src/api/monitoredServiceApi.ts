@@ -1,12 +1,13 @@
 import type {MonitoredService} from "../types/MonitoredService";
 import { API_BASE_URL } from "./config";
+import { apiFetch } from "./client";
 import type {CreateMonitoredServiceRequest} from "../types/CreateMonitoredServiceRequest";
 
 export async function getMonitoredServices(
     organisationId : string
     ): Promise<MonitoredService[]> {
     const url = `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services`;
-    const response= await fetch(url);
+    const response= await apiFetch(url);
     if (!response.ok) {
         throw new Error("Could not get monitored services");
     }
@@ -18,7 +19,7 @@ export async function getMonitoredService(
     monitoredServiceId : string
 ): Promise<MonitoredService>{
     const url = `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services/${monitoredServiceId}`;
-    const response= await fetch(url);
+    const response= await apiFetch(url);
     if (!response.ok) {
         throw new Error("Could not get monitored service");
     }
@@ -31,7 +32,7 @@ export async function enableMonitoredService(
 ): Promise<MonitoredService> {
     const url = `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services/${monitoredServiceId}/enable`;
 
-    const response= await fetch(url, {method:"PATCH"});
+    const response= await apiFetch(url, {method:"PATCH"});
 
     if (!response.ok) {
         throw new Error("Could not enable monitored service");
@@ -45,7 +46,7 @@ export async function disableMonitoredService(
 ): Promise<MonitoredService> {
     const url = `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services/${monitoredServiceId}/disable`;
 
-    const response= await fetch(url, {method:"PATCH"});
+    const response= await apiFetch(url, {method:"PATCH"});
 
     if (!response.ok) {
         throw new Error("Could not disable monitored service");
@@ -58,7 +59,7 @@ export async function createMonitoredService(
     request: CreateMonitoredServiceRequest
 ):Promise<MonitoredService>{
     const url= `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services`;
-    const response = await fetch(url,
+    const response = await apiFetch(url,
         {method:"POST",
          headers:{
             "Content-Type": "application/json"

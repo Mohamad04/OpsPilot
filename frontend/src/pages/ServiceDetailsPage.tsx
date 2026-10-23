@@ -171,9 +171,11 @@ export default function ServiceDetailsPage() {
 
                         <dt>Service Status</dt>
                         <dd>
+                            <span className={`status-indicator ${service.enabled ? "status-enabled" : "status-disabled"}`}>
                             {service.enabled
                                 ? "Enabled"
                                 : "Disabled"}
+                            </span>
                         </dd>
 
                         <dt>Service Base URL</dt>

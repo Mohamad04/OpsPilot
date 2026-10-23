@@ -1,0 +1,19 @@
+package com.opspilot.backend.domain;
+
+import org.springframework.data.repository.ListCrudRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface OrganisationMembershipRepository extends ListCrudRepository<OrganisationMembership, UUID> {
+    Optional<OrganisationMembership> findByOrganisationIdAndUserId(UUID organisationId, UUID userId);
+    List<OrganisationMembership> findAllByOrganisationId(UUID organisationId);
+    List<OrganisationMembership> findAllByUserId(UUID userId);
+
+    @Query("select membership from OrganisationMembership membership "
+            + "join fetch membership.organisation where membership.user.id = :userId")
+    List<OrganisationMembership> findAllWithOrganisationByUserId(@Param("userId") UUID userId);
+}
