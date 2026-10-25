@@ -1,0 +1,47 @@
+.service-details-page { container-type: inline-size; }
+.service-back-link { display: inline-flex; align-items: center; justify-self: start; gap: var(--space-1); min-height: var(--touch-target); font-size: var(--text-sm); font-weight: 600; text-decoration: none; }
+.service-back-link:hover { text-decoration: underline; }
+.service-summary { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--space-6); padding: clamp(1rem, 3vw, 2rem); }
+.service-summary-content { min-width: 0; flex: 1 1 22rem; display: grid; gap: var(--space-3); }
+.service-eyebrow { color: var(--color-muted); font-size: var(--text-xs); font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; }
+.service-summary h1 { overflow-wrap: anywhere; }
+.service-badges { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); min-width: 0; }
+.service-badge { display: inline-flex; align-items: center; max-width: 100%; padding: 0.2rem 0.6rem; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-background); color: var(--color-muted); font-size: var(--text-xs); font-weight: 600; overflow-wrap: anywhere; }
+.service-environment-production { background: var(--color-warning-soft); color: var(--color-warning); border-color: transparent; }
+.service-environment-staging { background: var(--color-primary-soft); color: var(--color-primary); border-color: transparent; }
+.service-muted { color: var(--color-muted); font-size: var(--text-sm); }
+.service-summary-action { min-width: 0; display: grid; gap: var(--space-2); }
+.service-refreshing { text-align: center; font-size: var(--text-xs); }
+.service-refresh-error { display: grid; justify-items: start; gap: var(--space-3); }
+.service-information-grid { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: var(--space-5); }
+.service-information-card { display: grid; gap: var(--space-6); height: 100%; padding: clamp(1rem, 2.5vw, 1.5rem); }
+.service-information-card > div:first-child { display: grid; gap: var(--space-1); }
+.service-facts { min-width: 0; }
+.service-facts > div { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); padding-block: var(--space-4); border-top: 1px solid var(--color-border); }
+.service-facts > div:last-child { padding-bottom: 0; }
+.service-facts dt { color: var(--color-muted); font-size: var(--text-sm); }
+.service-facts dd { min-width: 0; margin: 0; font-size: var(--text-sm); font-weight: 550; overflow-wrap: anywhere; }
+.service-facts code { white-space: normal; overflow-wrap: anywhere; font-size: 0.8125rem; }
+.service-endpoint-facts dd { padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); }
+.service-monitoring-note { align-self: end; padding: var(--space-4); border-radius: var(--radius-sm); background: var(--color-background); color: var(--color-muted); font-size: var(--text-sm); }
+.service-monitoring-note strong { display: block; margin-bottom: var(--space-1); color: var(--color-text); font-weight: 600; }
+.service-action-dialog { width: min(30rem, calc(100% - 2rem)); max-width: calc(100% - 2rem); max-height: calc(100dvh - 2rem); padding: 0; border: 1px solid var(--color-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); background: var(--color-surface); color: var(--color-text); overflow-y: auto; }
+.service-action-dialog::backdrop { background: rgb(15 23 42 / 40%); }
+.service-confirmation { display: grid; min-width: 0; gap: var(--space-5); padding: clamp(1rem, 4vw, 1.75rem); }
+.service-confirmation-heading { display: grid; gap: var(--space-3); }
+.service-confirmation-heading p { color: var(--color-muted); font-size: var(--text-sm); }
+.service-confirmation-heading strong { color: var(--color-text); }
+.service-confirmation-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-3); }
+.service-action-dialog .service-confirmation .service-action-progress { background: var(--color-primary-soft); color: var(--color-primary); border-color: var(--color-border); font-size: var(--text-sm); }
+
+/* Use available page width: the shell can be expanded or collapsed independently. */
+@container (min-width: 42rem) {
+  .service-information-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 29.999rem) {
+  .service-summary-action, .service-summary-action > button { width: 100%; }
+}
+@media (max-width: 29.999rem) {
+  .service-confirmation-actions { flex-direction: column-reverse; }
+  .service-confirmation-actions > button { width: 100%; }
+}
