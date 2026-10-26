@@ -1,6 +1,8 @@
 package com.opspilot.backend.web.exception;
 
 import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
+import com.opspilot.backend.application.exception.AlertNotFoundException;
+import com.opspilot.backend.application.exception.InvalidAlertQueryException;
 import com.opspilot.backend.application.exception.InsufficientOrganisationPermissionException;
 import com.opspilot.backend.application.exception.ForbiddenException;
 import com.opspilot.backend.application.exception.UserProvisioningConflictException;
@@ -26,6 +28,18 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AlertNotFoundException.class)
+    public ResponseEntity<ApiError> handleAlertNotFound(AlertNotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ApiError(HttpStatus.NOT_FOUND.value(), exception.getMessage(), Map.of()));
+    }
+
+    @ExceptionHandler(InvalidAlertQueryException.class)
+    public ResponseEntity<ApiError> handleInvalidAlertQuery(InvalidAlertQueryException exception) {
+        return ResponseEntity.badRequest().body(
+                new ApiError(HttpStatus.BAD_REQUEST.value(), exception.getMessage(), Map.of()));
+    }
 
     @ExceptionHandler(InvalidAlertRuleConfigurationException.class)
     public ResponseEntity<ApiError> handleInvalidAlertRuleConfiguration(InvalidAlertRuleConfigurationException exception) {

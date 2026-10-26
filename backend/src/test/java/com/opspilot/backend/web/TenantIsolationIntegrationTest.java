@@ -66,6 +66,7 @@ class TenantIsolationIntegrationTest {
     @Autowired MonitoredServiceRepository services;
     @Autowired HealthCheckResultRepository healthResults;
     @Autowired AlertRuleRepository alertRules;
+    @Autowired AlertRepository alerts;
 
     private UUID alpha, beta, alphaService, betaService;
     private String alice, bob, dual, outsider;
@@ -130,7 +131,8 @@ class TenantIsolationIntegrationTest {
         assertEquals(0, memberships.findAllByUserId(users.findByIdentityProviderSubject("outsider").orElseThrow().getId()).size());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write"})
+    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write",
+            "alerts", "alert-details", "alert-history", "alert-summary"})
     void unauthorisedTenantAndUnknownTenantAreIndistinguishable(String operation) throws Exception {
         HttpResponse<String> denied = operation(operation, beta, betaService, alice);
         HttpResponse<String> absent = operation(operation, UUID.randomUUID(), UUID.randomUUID(), alice);
@@ -143,7 +145,7 @@ class TenantIsolationIntegrationTest {
         assertUnchanged();
     }
 
-    @ParameterizedTest @ValueSource(strings = {"read", "enable", "disable", "alert-read", "alert-write"})
+    @ParameterizedTest @ValueSource(strings = {"read", "enable", "disable", "alert-read", "alert-write", "alert-history"})
     void serviceIdsCannotCrossTenantPathsEvenForAMemberOfBoth(String operation) throws Exception {
         for (String identity : List.of(alice, dual)) {
             HttpResponse<String> response = operation(operation, alpha, betaService, identity);
@@ -186,7 +188,8 @@ class TenantIsolationIntegrationTest {
         User formerOwner = users.findByIdentityProviderSubject("alice").orElseThrow();
         memberships.deleteAll(memberships.findAllByUserId(formerOwner.getId()));
         assertEquals("[]", expect(call("GET", "/api/organisations", alice, null), 200).body());
-        for (String operation : List.of("organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write")) {
+        for (String operation : List.of("organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write",
+                "alerts", "alert-details", "alert-history", "alert-summary")) {
             expect(operation(operation, alpha, alphaService, alice), 404);
         }
         assertEquals(3, services.count());
@@ -243,7 +246,8 @@ class TenantIsolationIntegrationTest {
         }
     }
 
-    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write"})
+    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write",
+            "alerts", "alert-details", "alert-history", "alert-summary"})
     void everyScopedOperationRejectsMissingMalformedAndInvalidSignedTokens(String operation) throws Exception {
         for (String identity : new String[]{null, "invalid",
                 token("alice", ISSUER, "wrong-api", KEYS, 300),
@@ -253,6 +257,57 @@ class TenantIsolationIntegrationTest {
             expect(operation(operation, alpha, alphaService, identity), 401);
         }
         assertUnchanged();
+    }
+
+    @Test
+    void persistedAlertApisKeepTenantScopeForRealJwtUsersIncludingDualMembership() throws Exception {
+        Alert active = alertFixture(alpha, alphaService, AlertSeverity.HIGH, false);
+        Alert resolved = alertFixture(alpha, alphaService, AlertSeverity.LOW, true);
+        Alert foreign = alertFixture(beta, betaService, AlertSeverity.CRITICAL, false);
+        String own = "/api/organisations/" + alpha + "/alerts";
+        String other = "/api/organisations/" + beta + "/alerts";
+        for (String identity : List.of(alice, dual)) {
+            JsonNode list = JSON.readTree(expect(call("GET", own, identity, null), 200).body());
+            assertEquals(2, list.get("totalElements").asLong());
+            String offset = java.time.OffsetDateTime.ofInstant(active.getFirstSeenAt(), java.time.ZoneOffset.ofHours(1))
+                    .toString().replace("+", "%2B");
+            assertEquals(JSON.readTree(expect(call("GET", own + "?from=" + active.getFirstSeenAt(), identity, null), 200).body()),
+                    JSON.readTree(expect(call("GET", own + "?from=" + offset, identity, null), 200).body()));
+            for (JsonNode entry : list.get("content")) {
+                assertEquals(alpha.toString(), entry.get("organisationId").asText());
+                assertEquals(alphaService.toString(), entry.get("monitoredServiceId").asText());
+                assertFalse(entry.toString().contains("fixture private diagnostic"));
+            }
+            assertEquals("ACTIVE", JSON.readTree(expect(call("GET", own + "/" + active.getId(), identity, null), 200).body()).get("status").asText());
+            assertEquals("RESOLVED", JSON.readTree(expect(call("GET", own + "/" + resolved.getId(), identity, null), 200).body()).get("status").asText());
+            assertEquals(2, JSON.readTree(expect(call("GET", base(alpha) + "/" + alphaService + "/alerts", identity, null), 200).body()).get("totalElements").asLong());
+            JsonNode summary = JSON.readTree(expect(call("GET", own + "/summary", identity, null), 200).body());
+            assertEquals(2, summary.get("totalAlerts").asLong()); assertEquals(1, summary.get("activeAlerts").asLong());
+            assertEquals(1, summary.get("resolvedAlerts").asLong()); assertEquals(0, summary.get("activeBySeverity").get("CRITICAL").asLong());
+            String missing = expect(call("GET", own + "/" + UUID.randomUUID(), identity, null), 404).body();
+            assertEquals(missing, expect(call("GET", own + "/" + foreign.getId(), identity, null), 404).body());
+            expect(call("GET", own + "?serviceId=" + betaService, identity, null), 404);
+        }
+        // The same signed token has VIEWER access in Beta and can read only Beta's history there.
+        JsonNode betaHistory = JSON.readTree(expect(call("GET", other, dual, null), 200).body());
+        assertEquals(1, betaHistory.get("totalElements").asLong());
+        assertEquals(foreign.getId().toString(), betaHistory.get("content").get(0).get("id").asText());
+        expect(call("GET", other + "/" + foreign.getId(), dual, null), 200);
+        for (String path : List.of(other, other + "/summary", other + "/" + foreign.getId(), base(beta) + "/" + betaService + "/alerts")) {
+            expect(call("GET", path, alice, null), 404);
+            expect(call("GET", path, outsider, null), 404);
+        }
+        assertEquals(3, alerts.count()); assertEquals(AlertStatus.ACTIVE, alerts.findById(active.getId()).orElseThrow().getStatus());
+    }
+
+    private Alert alertFixture(UUID organisation, UUID service, AlertSeverity severity, boolean resolved) {
+        Instant start = Instant.now().minusSeconds(60).truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        var failure = healthResults.save(new HealthCheckResult(organisation, service, start, start,
+                HealthStatus.DOWN, 503, 5, "fixture private diagnostic"));
+        Alert alert = Alert.open(failure, failure.getId(), start, 1, 1, 2, severity);
+        if (resolved) alert.resolve(healthResults.save(new HealthCheckResult(organisation, service, start.plusSeconds(2), start.plusSeconds(2),
+                HealthStatus.UP, 200, 3, null)), 2);
+        return alerts.save(alert);
     }
 
     private void assertUnchanged() {
@@ -265,6 +320,10 @@ class TenantIsolationIntegrationTest {
 
     private HttpResponse<String> operation(String operation, UUID tenant, UUID service, String identity) throws Exception {
         return switch (operation) {
+            case "alerts" -> call("GET", "/api/organisations/" + tenant + "/alerts", identity, null);
+            case "alert-details" -> call("GET", "/api/organisations/" + tenant + "/alerts/" + service, identity, null);
+            case "alert-history" -> call("GET", base(tenant) + "/" + service + "/alerts", identity, null);
+            case "alert-summary" -> call("GET", "/api/organisations/" + tenant + "/alerts/summary", identity, null);
             case "organisation" -> call("GET", "/api/organisations/" + tenant, identity, null);
             case "list" -> call("GET", base(tenant), identity, null);
             case "read" -> call("GET", base(tenant) + "/" + service, identity, null);
