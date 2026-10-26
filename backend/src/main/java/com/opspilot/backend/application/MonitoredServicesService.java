@@ -17,17 +17,19 @@ public class MonitoredServicesService {
     private final OrganisationRepository organisationRepository;
     private final AuthenticatedUserService authenticatedUserService;
     private final OrganisationMembershipService organisationMembershipService;
+    private final AlertEvaluationEngine evaluator;
 
     public MonitoredServicesService(
             MonitoredServiceRepository monitoredServiceRepository,
             OrganisationRepository organisationRepository,
             AuthenticatedUserService authenticatedUserService,
-            OrganisationMembershipService organisationMembershipService) {
+            OrganisationMembershipService organisationMembershipService, AlertEvaluationEngine evaluator) {
 
         this.monitoredServiceRepository = monitoredServiceRepository;
         this.organisationRepository = organisationRepository;
         this.authenticatedUserService = authenticatedUserService;
         this.organisationMembershipService = organisationMembershipService;
+        this.evaluator = evaluator;
     }
 
     public MonitoredServiceResponse createMonitoredService(String subject,
@@ -76,11 +78,13 @@ public class MonitoredServicesService {
         requireWritePermission(subject, organisationId);
 
         MonitoredService monitoredService =
-                findScopedService(organisationId, monitoredServiceId);
+                findScopedServiceForUpdate(organisationId, monitoredServiceId);
 
         monitoredService.disable();
 
-        return toResponse(monitoredServiceRepository.save(monitoredService));
+        var saved = monitoredServiceRepository.save(monitoredService);
+        evaluator.resetForConfigurationChange(organisationId, monitoredServiceId);
+        return toResponse(saved);
     }
 
     public MonitoredServiceResponse enable(
@@ -90,11 +94,18 @@ public class MonitoredServicesService {
         requireWritePermission(subject, organisationId);
 
         MonitoredService monitoredService =
-                findScopedService(organisationId, monitoredServiceId);
+                findScopedServiceForUpdate(organisationId, monitoredServiceId);
 
         monitoredService.enable();
 
-        return toResponse(monitoredServiceRepository.save(monitoredService));
+        var saved = monitoredServiceRepository.save(monitoredService);
+        evaluator.resetForConfigurationChange(organisationId, monitoredServiceId);
+        return toResponse(saved);
+    }
+
+    private MonitoredService findScopedServiceForUpdate(UUID organisationId, UUID monitoredServiceId) {
+        return monitoredServiceRepository.findByIdAndOrganisationIdForUpdate(monitoredServiceId, organisationId)
+                .orElseThrow(() -> new MonitoredServiceNotFoundException(monitoredServiceId));
     }
 
     @Transactional(readOnly = true)

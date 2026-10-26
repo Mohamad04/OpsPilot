@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface HealthCheckResultRepository extends ListCrudRepository<HealthCheckResult, UUID> {
+    Optional<HealthCheckResult> findByIdAndOrganisationIdAndMonitoredServiceId(UUID id, UUID organisationId, UUID monitoredServiceId);
     Optional<HealthCheckResult> findFirstByOrganisationIdAndMonitoredServiceIdOrderByStartedAtDescIdDesc(UUID organisationId, UUID serviceId);
     List<HealthCheckResult> findByOrganisationIdAndMonitoredServiceIdOrderByStartedAtDescIdDesc(UUID organisationId, UUID serviceId, Pageable limit);
 }

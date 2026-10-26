@@ -6,15 +6,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.temporal.ChronoUnit;
 
 @Service
 public class HealthCheckStore {
     private final MonitoredServiceRepository services;
     private final HealthCheckResultRepository results;
+    private final AlertEvaluationEngine evaluator;
 
-    public HealthCheckStore(MonitoredServiceRepository services, HealthCheckResultRepository results) {
+    public HealthCheckStore(MonitoredServiceRepository services, HealthCheckResultRepository results, AlertEvaluationEngine evaluator) {
         this.services = services;
         this.results = results;
+        this.evaluator = evaluator;
     }
 
     @Transactional(readOnly = true)
@@ -31,12 +34,15 @@ public class HealthCheckStore {
     @Transactional
     public void record(HealthCheckTarget target, HealthObservation observation) {
         // Discard a result if the service was removed, disabled, or its checked configuration changed.
-        services.findByIdAndOrganisationId(target.serviceId(), target.organisationId())
+        services.findByIdAndOrganisationIdForUpdate(target.serviceId(), target.organisationId())
                 .filter(this::eligible)
                 .filter(service -> service.getBaseUrl().equals(target.baseUrl()) && service.getHealthEndpoint().equals(target.healthEndpoint()))
-                .ifPresent(service -> results.save(new HealthCheckResult(target.organisationId(), target.serviceId(),
-                        observation.startedAt(), observation.completedAt(), observation.status(), observation.httpStatusCode(),
-                        observation.responseTimeMs(), observation.failureDetail())));
+                .ifPresent(service -> {
+                    var result = results.save(new HealthCheckResult(target.organisationId(), target.serviceId(),
+                            observation.startedAt().truncatedTo(ChronoUnit.MICROS), observation.completedAt().truncatedTo(ChronoUnit.MICROS),
+                            observation.status(), observation.httpStatusCode(), observation.responseTimeMs(), observation.failureDetail()));
+                    evaluator.evaluate(target.organisationId(), target.serviceId(), result.getId());
+                });
     }
 
     private boolean eligible(MonitoredService service) { return service.isEnabled() && service.getServiceType() == ServiceType.HTTP; }

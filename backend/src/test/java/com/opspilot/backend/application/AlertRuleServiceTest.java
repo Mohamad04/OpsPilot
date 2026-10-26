@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class AlertRuleServiceTest {
     @Mock AlertRuleRepository rules;
+    @Mock AlertEvaluationEngine evaluator;
     @Mock MonitoredServiceRepository services;
     @Mock AuthenticatedUserService users;
     @Mock OrganisationMembershipService memberships;
@@ -33,7 +34,7 @@ class AlertRuleServiceTest {
     private AlertRuleService application;
 
     @BeforeEach void setup() {
-        application = new AlertRuleService(rules, services, users, memberships, Clock.fixed(now, ZoneOffset.UTC));
+        application = new AlertRuleService(rules, services, users, memberships, Clock.fixed(now, ZoneOffset.UTC), evaluator);
         when(users.findByIdentityProviderSubject("subject")).thenReturn(user);
         when(user.getId()).thenReturn(userId);
     }
@@ -70,6 +71,7 @@ class AlertRuleServiceTest {
         when(rules.save(any())).thenAnswer(call -> call.getArgument(0));
         var response = application.configureRule("subject", organisation, serviceId, true, 7, 4, AlertSeverity.LOW);
         assertEquals(7, response.consecutiveFailures()); assertEquals(4, response.consecutiveRecoveries());
+        verify(evaluator).resetForConfigurationChange(organisation, serviceId);
         assertEquals(organisation, response.organisationId()); assertEquals(serviceId, response.monitoredServiceId());
         var order = inOrder(memberships, services, rules);
         order.verify(memberships).requireMonitoredServiceWritePermission(organisation, userId);
@@ -88,6 +90,7 @@ class AlertRuleServiceTest {
         assertEquals(now.minusSeconds(1), response.createdAt()); assertEquals(now, response.updatedAt());
         assertFalse(existing.isEnabled());
         verify(rules).save(existing);
+        verify(evaluator).resetForConfigurationChange(organisation, serviceId);
     }
 
     @Test void nonMemberAndViewerCannotReachConfigurationStorage() {

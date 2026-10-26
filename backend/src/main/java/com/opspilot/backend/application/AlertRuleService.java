@@ -18,15 +18,17 @@ public class AlertRuleService {
     private final AuthenticatedUserService authenticatedUsers;
     private final OrganisationMembershipService memberships;
     private final Clock clock;
+    private final AlertEvaluationEngine evaluator;
 
     public AlertRuleService(AlertRuleRepository rules, MonitoredServiceRepository services,
                             AuthenticatedUserService authenticatedUsers, OrganisationMembershipService memberships,
-                            Clock clock) {
+                            Clock clock, AlertEvaluationEngine evaluator) {
         this.rules = rules;
         this.services = services;
         this.authenticatedUsers = authenticatedUsers;
         this.memberships = memberships;
         this.clock = clock;
+        this.evaluator = evaluator;
     }
 
     @Transactional(readOnly = true)
@@ -51,8 +53,12 @@ public class AlertRuleService {
         var now = clock.instant();
         AlertRule rule = rules.findByOrganisationIdAndMonitoredServiceId(organisationId, monitoredServiceId)
                 .orElseGet(() -> AlertRule.createDefault(organisationId, monitoredServiceId, now));
+        boolean changed = rule.isEnabled() != enabled || rule.getConsecutiveFailures() != consecutiveFailures
+                || rule.getConsecutiveRecoveries() != consecutiveRecoveries || rule.getSeverity() != severity;
         rule.changeConfiguration(enabled, consecutiveFailures, consecutiveRecoveries, severity, now);
-        return AlertRuleResponse.from(rules.save(rule));
+        AlertRule saved = rules.save(rule);
+        if (changed) evaluator.resetForConfigurationChange(organisationId, monitoredServiceId);
+        return AlertRuleResponse.from(saved);
     }
 
     private static void requireHttp(MonitoredService service) {

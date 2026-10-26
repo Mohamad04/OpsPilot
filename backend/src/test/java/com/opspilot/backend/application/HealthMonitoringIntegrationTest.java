@@ -38,6 +38,8 @@ class HealthMonitoringIntegrationTest {
     @Autowired HealthCheckRunner runner;
     @Autowired HealthCheckStore store;
     @Autowired HealthCheckResultRepository results;
+    @Autowired AlertRepository alerts;
+    @Autowired AlertEvaluationStateRepository evaluationStates;
     @Autowired MonitoredServiceRepository services;
     @Autowired OrganisationRepository organisations;
     @Autowired OrganisationMembershipRepository memberships;
@@ -56,7 +58,7 @@ class HealthMonitoringIntegrationTest {
     private final AtomicInteger hits = new AtomicInteger();
 
     @BeforeEach void fixtures() throws Exception {
-        results.deleteAll(); services.deleteAll(); memberships.deleteAll(); organisations.deleteAll(); users.deleteAll();
+        alerts.deleteAll(); evaluationStates.deleteAll(); results.deleteAll(); services.deleteAll(); memberships.deleteAll(); organisations.deleteAll(); users.deleteAll();
         alpha = organisations.save(Organisation.create("Alpha", "alpha-health"));
         beta = organisations.save(Organisation.create("Beta", "beta-health"));
         User alice = users.save(User.create("alice-health", "Alice", "alice-health@example.test"));

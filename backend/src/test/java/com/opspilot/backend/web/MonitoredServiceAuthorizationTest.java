@@ -37,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class, MonitoredServicesService.class,
         AuthenticatedUserService.class, OrganisationMembershipService.class})
 class MonitoredServiceAuthorizationTest {
+    @MockitoBean com.opspilot.backend.application.AlertEvaluationEngine evaluator;
     private static final String SUBJECT = "authenticated-subject";
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID ORGANISATION_ID = UUID.randomUUID();
@@ -131,7 +132,7 @@ class MonitoredServiceAuthorizationTest {
         if (operation.equals("create")) {
             when(organisationRepository.findById(ORGANISATION_ID)).thenReturn(Optional.of(organisation));
         } else {
-            when(serviceRepository.findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID))
+            when(serviceRepository.findByIdAndOrganisationIdForUpdate(SERVICE_ID, ORGANISATION_ID))
                     .thenReturn(Optional.of(service(operation.equals("disable"))));
         }
         when(serviceRepository.save(any(MonitoredService.class))).thenAnswer(call -> call.getArgument(0));
@@ -159,11 +160,14 @@ class MonitoredServiceAuthorizationTest {
     @ValueSource(strings = {"read", "enable", "disable"})
     void anotherOrganisationsServiceIdCannotBeUsedUnderOwnOrganisation(String operation) throws Exception {
         member(OrganisationRole.ADMIN);
-        when(serviceRepository.findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID))
+        if (operation.equals("read")) when(serviceRepository.findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID))
+                .thenReturn(Optional.empty());
+        else when(serviceRepository.findByIdAndOrganisationIdForUpdate(SERVICE_ID, ORGANISATION_ID))
                 .thenReturn(Optional.empty());
         mockMvc.perform(request(operation, ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404));
-        verify(serviceRepository).findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID);
+        if (operation.equals("read")) verify(serviceRepository).findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID);
+        else verify(serviceRepository).findByIdAndOrganisationIdForUpdate(SERVICE_ID, ORGANISATION_ID);
         verify(serviceRepository, never()).findById(any());
         verify(serviceRepository, never()).save(any());
     }
@@ -210,7 +214,7 @@ class MonitoredServiceAuthorizationTest {
     @ValueSource(strings = {"enable", "disable"})
     void repeatingStatusChangeReturnsConflictWithoutSaving(String operation) throws Exception {
         member(OrganisationRole.ENGINEER);
-        when(serviceRepository.findByIdAndOrganisationId(SERVICE_ID, ORGANISATION_ID))
+        when(serviceRepository.findByIdAndOrganisationIdForUpdate(SERVICE_ID, ORGANISATION_ID))
                 .thenReturn(Optional.of(service(operation.equals("enable"))));
         mockMvc.perform(request(operation, ORGANISATION_ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.status").value(409))

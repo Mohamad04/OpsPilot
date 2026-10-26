@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @ExtendWith(MockitoExtension.class)
 public class MonitoredServicesServiceTest {
+    @Mock AlertEvaluationEngine evaluator;
     @Mock
     MonitoredServiceRepository  monitoredServiceRepository;
 
@@ -164,7 +165,7 @@ public class MonitoredServicesServiceTest {
         MonitoredService monitoredService = createValidMonitoredService(
                 Organisation.create("acme", "acme"));
 
-        when(monitoredServiceRepository.findByIdAndOrganisationId(
+        when(monitoredServiceRepository.findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId))
                 .thenReturn(Optional.of(monitoredService));
         when(monitoredServiceRepository.save(monitoredService))
@@ -175,7 +176,7 @@ public class MonitoredServicesServiceTest {
 
         assertEquals("Payment API", result.name());
         assertFalse(result.enabled());
-        verify(monitoredServiceRepository).findByIdAndOrganisationId(
+        verify(monitoredServiceRepository).findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId);
         verify(monitoredServiceRepository).save(monitoredService);
     }
@@ -185,7 +186,7 @@ public class MonitoredServicesServiceTest {
         UUID organisationId = UUID.randomUUID();
         UUID monitoredServiceId = UUID.randomUUID();
 
-        when(monitoredServiceRepository.findByIdAndOrganisationId(
+        when(monitoredServiceRepository.findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId))
                 .thenReturn(Optional.empty());
 
@@ -193,7 +194,7 @@ public class MonitoredServicesServiceTest {
                 () -> monitoredServicesService.disable(
                         "user", organisationId, monitoredServiceId));
 
-        verify(monitoredServiceRepository).findByIdAndOrganisationId(
+        verify(monitoredServiceRepository).findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId);
         verify(monitoredServiceRepository, never())
                 .save(any(MonitoredService.class));
@@ -207,7 +208,7 @@ public class MonitoredServicesServiceTest {
                 Organisation.create("acme", "acme"));
         monitoredService.disable();
 
-        when(monitoredServiceRepository.findByIdAndOrganisationId(
+        when(monitoredServiceRepository.findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId))
                 .thenReturn(Optional.of(monitoredService));
         when(monitoredServiceRepository.save(monitoredService))
@@ -218,7 +219,7 @@ public class MonitoredServicesServiceTest {
 
         assertEquals("Payment API", result.name());
         assertTrue(result.enabled());
-        verify(monitoredServiceRepository).findByIdAndOrganisationId(
+        verify(monitoredServiceRepository).findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId);
         verify(monitoredServiceRepository).save(monitoredService);
     }
@@ -228,7 +229,7 @@ public class MonitoredServicesServiceTest {
         UUID organisationId = UUID.randomUUID();
         UUID monitoredServiceId = UUID.randomUUID();
 
-        when(monitoredServiceRepository.findByIdAndOrganisationId(
+        when(monitoredServiceRepository.findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId))
                 .thenReturn(Optional.empty());
 
@@ -236,7 +237,7 @@ public class MonitoredServicesServiceTest {
                 () -> monitoredServicesService.enable(
                         "user", organisationId, monitoredServiceId));
 
-        verify(monitoredServiceRepository).findByIdAndOrganisationId(
+        verify(monitoredServiceRepository).findByIdAndOrganisationIdForUpdate(
                 monitoredServiceId, organisationId);
         verify(monitoredServiceRepository, never())
                 .save(any(MonitoredService.class));
@@ -284,4 +285,3 @@ public class MonitoredServicesServiceTest {
                 .findAllByOrganisationId(organisationId);
     }
 }
-

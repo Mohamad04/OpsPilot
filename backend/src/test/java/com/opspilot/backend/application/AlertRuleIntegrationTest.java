@@ -56,6 +56,8 @@ class AlertRuleIntegrationTest {
     @Autowired JsonMapper json;
     @Autowired AlertRuleService application;
     @Autowired AlertRuleRepository rules;
+    @Autowired AlertRepository alerts;
+    @Autowired AlertEvaluationStateRepository evaluationStates;
     @Autowired MonitoredServiceRepository services;
     @Autowired OrganisationRepository organisations;
     @Autowired UserRepository users;
@@ -73,7 +75,7 @@ class AlertRuleIntegrationTest {
     private OrganisationMembership ownerMembership;
 
     @BeforeEach void fixtures() {
-        rules.deleteAll(); results.deleteAll(); services.deleteAll(); memberships.deleteAll(); organisations.deleteAll(); users.deleteAll();
+        alerts.deleteAll(); evaluationStates.deleteAll(); rules.deleteAll(); results.deleteAll(); services.deleteAll(); memberships.deleteAll(); organisations.deleteAll(); users.deleteAll();
         when(clock.instant()).thenReturn(NOW);
         when(decoder.decode(anyString())).thenThrow(new BadJwtException("Invalid fixture JWT"));
         alpha = organisations.save(Organisation.create("Alpha alerts", "alpha-alerts"));

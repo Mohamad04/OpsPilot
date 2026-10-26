@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @Testcontainers
 class ResponseDtoIntegrationTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean AlertEvaluationEngine evaluator;
     @Container
     @ServiceConnection
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.4-alpine");
