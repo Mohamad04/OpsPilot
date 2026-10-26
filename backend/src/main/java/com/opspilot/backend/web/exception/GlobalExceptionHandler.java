@@ -27,6 +27,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InvalidAlertRuleConfigurationException.class)
+    public ResponseEntity<ApiError> handleInvalidAlertRuleConfiguration(InvalidAlertRuleConfigurationException exception) {
+        return ResponseEntity.badRequest().body(
+                new ApiError(HttpStatus.BAD_REQUEST.value(), exception.getMessage(), Map.of()));
+    }
+
     @ExceptionHandler(UserProvisioningConflictException.class)
     public ResponseEntity<ApiError> handleUserProvisioningConflict(UserProvisioningConflictException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(

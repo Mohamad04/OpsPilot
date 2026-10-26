@@ -65,6 +65,7 @@ class TenantIsolationIntegrationTest {
     @Autowired OrganisationMembershipRepository memberships;
     @Autowired MonitoredServiceRepository services;
     @Autowired HealthCheckResultRepository healthResults;
+    @Autowired AlertRuleRepository alertRules;
 
     private UUID alpha, beta, alphaService, betaService;
     private String alice, bob, dual, outsider;
@@ -129,7 +130,7 @@ class TenantIsolationIntegrationTest {
         assertEquals(0, memberships.findAllByUserId(users.findByIdentityProviderSubject("outsider").orElseThrow().getId()).size());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable"})
+    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write"})
     void unauthorisedTenantAndUnknownTenantAreIndistinguishable(String operation) throws Exception {
         HttpResponse<String> denied = operation(operation, beta, betaService, alice);
         HttpResponse<String> absent = operation(operation, UUID.randomUUID(), UUID.randomUUID(), alice);
@@ -142,7 +143,7 @@ class TenantIsolationIntegrationTest {
         assertUnchanged();
     }
 
-    @ParameterizedTest @ValueSource(strings = {"read", "enable", "disable"})
+    @ParameterizedTest @ValueSource(strings = {"read", "enable", "disable", "alert-read", "alert-write"})
     void serviceIdsCannotCrossTenantPathsEvenForAMemberOfBoth(String operation) throws Exception {
         for (String identity : List.of(alice, dual)) {
             HttpResponse<String> response = operation(operation, alpha, betaService, identity);
@@ -156,7 +157,7 @@ class TenantIsolationIntegrationTest {
         assertUnchanged();
     }
 
-    @ParameterizedTest @ValueSource(strings = {"create", "enable", "disable"})
+    @ParameterizedTest @ValueSource(strings = {"create", "enable", "disable", "alert-write"})
     void rolesAreLocalToEachOrganisationAndCannotBeElevatedByJwtClaims(String operation) throws Exception {
         // The same signed token claims OWNER, but the database gives this user VIEWER in Beta.
         expect(operation(operation, beta, betaService, dual), 403);
@@ -185,12 +186,36 @@ class TenantIsolationIntegrationTest {
         User formerOwner = users.findByIdentityProviderSubject("alice").orElseThrow();
         memberships.deleteAll(memberships.findAllByUserId(formerOwner.getId()));
         assertEquals("[]", expect(call("GET", "/api/organisations", alice, null), 200).body());
-        for (String operation : List.of("organisation", "list", "read", "create", "enable", "disable")) {
+        for (String operation : List.of("organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write")) {
             expect(operation(operation, alpha, alphaService, alice), 404);
         }
         assertEquals(3, services.count());
         assertTrue(services.findById(alphaService).orElseThrow().isEnabled());
         expect(call("GET", base(alpha), dual, null), 200);
+    }
+
+    @Test
+    void alertRulesRemainDistinctAcrossAuthorisedTenantsWithRealJwtRequests() throws Exception {
+        JsonNode defaults = JSON.readTree(expect(operation("alert-read", alpha, alphaService, alice), 200).body());
+        assertTrue(defaults.get("id").isNull());
+        assertEquals(0, alertRules.count());
+        String alphaPath = base(alpha) + "/" + alphaService + "/alert-rule";
+        String betaPath = base(beta) + "/" + betaService + "/alert-rule";
+        String alphaConfiguration = "{\"enabled\":true,\"consecutiveFailures\":4,\"consecutiveRecoveries\":2,\"severity\":\"LOW\"}";
+        String betaConfiguration = "{\"enabled\":false,\"consecutiveFailures\":1,\"consecutiveRecoveries\":1,\"severity\":\"CRITICAL\"}";
+        String first = expect(call("PUT", alphaPath, dual, alphaConfiguration), 200).body(); // ENGINEER in Alpha.
+        expect(call("PUT", betaPath, bob, betaConfiguration), 200);
+        assertEquals(JSON.readTree(first), JSON.readTree(expect(call("PUT", alphaPath, dual, alphaConfiguration), 200).body()));
+        for (UUID tenant : List.of(alpha, beta, alpha, beta)) {
+            UUID service = tenant.equals(alpha) ? alphaService : betaService;
+            JsonNode configuration = JSON.readTree(expect(operation("alert-read", tenant, service, dual), 200).body());
+            assertEquals(tenant.toString(), configuration.get("organisationId").asText());
+            assertEquals(service.toString(), configuration.get("monitoredServiceId").asText());
+            assertEquals(tenant.equals(alpha) ? "LOW" : "CRITICAL", configuration.get("severity").asText());
+            assertEquals(tenant.equals(alpha), configuration.get("enabled").asBoolean());
+        }
+        assertEquals(2, alertRules.count());
+        assertEquals(4, memberships.count());
     }
 
     @Test
@@ -218,7 +243,7 @@ class TenantIsolationIntegrationTest {
         }
     }
 
-    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable"})
+    @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write"})
     void everyScopedOperationRejectsMissingMalformedAndInvalidSignedTokens(String operation) throws Exception {
         for (String identity : new String[]{null, "invalid",
                 token("alice", ISSUER, "wrong-api", KEYS, 300),
@@ -235,6 +260,7 @@ class TenantIsolationIntegrationTest {
         assertEquals(4, memberships.count());
         assertTrue(services.findById(alphaService).orElseThrow().isEnabled());
         assertTrue(services.findById(betaService).orElseThrow().isEnabled());
+        assertEquals(0, alertRules.count());
     }
 
     private HttpResponse<String> operation(String operation, UUID tenant, UUID service, String identity) throws Exception {
@@ -243,6 +269,9 @@ class TenantIsolationIntegrationTest {
             case "list" -> call("GET", base(tenant), identity, null);
             case "read" -> call("GET", base(tenant) + "/" + service, identity, null);
             case "create" -> call("POST", base(tenant), identity, CREATE.formatted("Denied registration", "denied"));
+            case "alert-read" -> call("GET", base(tenant) + "/" + service + "/alert-rule", identity, null);
+            case "alert-write" -> call("PUT", base(tenant) + "/" + service + "/alert-rule", identity,
+                    "{\"enabled\":true,\"consecutiveFailures\":3,\"consecutiveRecoveries\":2,\"severity\":\"HIGH\"}");
             default -> call("PATCH", base(tenant) + "/" + service + "/" + operation, identity, null);
         };
     }
