@@ -8,6 +8,10 @@ import ServiceDetailsPage from "../pages/ServiceDetailsPage";
 import { getMonitoredService, enableMonitoredService, disableMonitoredService } from "../api/monitoredServiceApi";
 import { ApiError } from "../api/client";
 import type { MonitoredService } from "../types/MonitoredService";
+import { getHealthHistory, getLatestHealth } from "../api/healthApi";
+import { unknownHealth } from "./healthFixtures";
+
+vi.mock("../api/healthApi", () => ({ getLatestHealth: vi.fn(), getHealthHistory: vi.fn() }));
 
 vi.mock("../api/monitoredServiceApi", () => ({
     getMonitoredService: vi.fn(), enableMonitoredService: vi.fn(), disableMonitoredService: vi.fn(),
@@ -26,6 +30,8 @@ const service: MonitoredService = {
 
 beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(getLatestHealth).mockImplementation(async (organisationId, serviceId) => unknownHealth(organisationId, serviceId));
+    vi.mocked(getHealthHistory).mockResolvedValue([]);
     fixture.organisation = { currentOrganisation: { id: service.organisationId }, organisationsPending: false, organisationsError: null };
     vi.mocked(getMonitoredService).mockResolvedValue({ ...service });
     vi.mocked(enableMonitoredService).mockResolvedValue({ ...service, enabled: true });
@@ -66,7 +72,7 @@ test("shows a real service summary, information cards and configuration-only sta
     const endpoints = screen.getByRole("region", { name: "Endpoints" });
     expect(endpoints).toHaveTextContent(service.baseUrl);
     expect(endpoints).toHaveTextContent(service.healthEndpoint);
-    expect(endpoints).toHaveTextContent("Health monitoring is not yet available.");
+    expect(endpoints).toHaveTextContent("Scheduled HTTP checks use this endpoint.");
     expect(screen.queryByText(/^(healthy|online)$/i)).not.toBeInTheDocument();
     expect(getMonitoredService).toHaveBeenCalledExactlyOnceWith(service.organisationId, service.id);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
@@ -249,7 +255,8 @@ test("an in-flight action finishing after tenant switching invalidates only its 
     rerenderPage();
     await screen.findByRole("heading", { name: "Other service" });
     await act(async () => complete({ ...service, enabled: false }));
-    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledTimes(3));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["monitored-service-health", service.organisationId, service.id] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["monitored-service", service.organisationId, service.id] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["monitored-services", service.organisationId] });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();

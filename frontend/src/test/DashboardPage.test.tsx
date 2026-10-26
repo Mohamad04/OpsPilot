@@ -11,6 +11,7 @@ import { useOrganisation } from "../hooks/useOrganisation";
 import { endSession, getAccessToken } from "../auth/auth";
 import type { Organisation } from "../types/Organisation";
 import type { MonitoredService } from "../types/MonitoredService";
+import { unknownHealth } from "./healthFixtures";
 
 // Exercise the real provider, API clients and query cache with controlled HTTP.
 vi.mock("../auth/auth", () => ({ getAccessToken: vi.fn(), endSession: vi.fn() }));
@@ -40,6 +41,8 @@ beforeEach(() => {
     fetchMock.mockImplementation(async (url) => {
         const path = new URL(url).pathname;
         if (path === "/api/organisations") return (await organisationsResponse()).clone();
+        const health = path.match(/^\/api\/organisations\/([^/]+)\/monitored-services\/([^/]+)\/health\/latest$/);
+        if (health) return json(unknownHealth(health[1], health[2]));
         const match = path.match(/^\/api\/organisations\/([^/]+)\/monitored-services$/);
         if (match && serviceResponses[match[1]]) return (await serviceResponses[match[1]]()).clone();
         throw new Error(`Unexpected dashboard API request: ${path}`);
@@ -125,11 +128,11 @@ test("an empty organisation has real zero totals, an onboarding action and no fa
     expect(screen.getByRole("heading", { name: "Service registration route" })).toBeInTheDocument();
 });
 
-test("all monitoring capabilities are explicitly unavailable without invented percentages or alert counts", async () => {
+test("HTTP monitoring is available while uptime, alerts and incidents remain unavailable", async () => {
     renderDashboard();
     const monitoring = await screen.findByRole("region", { name: "Monitoring capabilities" });
-    expect(within(monitoring).getAllByText("Not implemented")).toHaveLength(4);
-    for (const feature of ["Health monitoring", "Uptime calculations", "Alerts", "Incidents"]) {
+    expect(within(monitoring).getAllByText("Not implemented")).toHaveLength(3);
+    for (const feature of ["Uptime calculations", "Alerts", "Incidents"]) {
         expect(within(monitoring).getByText(feature).closest("li")).toHaveTextContent("Not implemented");
     }
     expect(screen.getByText(/Enabled does not mean healthy/)).toBeInTheDocument();

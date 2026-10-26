@@ -5,6 +5,7 @@ import { useOrganisation } from "../hooks/useOrganisation";
 import { environmentValues } from "../schemas/createMonitoredServiceSchema";
 import Icon from "../components/Icon";
 import PageState from "../components/PageState";
+import MonitoringOverview from "../components/MonitoringOverview";
 import "../styles/dashboard.css";
 
 const environmentLabels = {
@@ -92,6 +93,8 @@ export default function DashboardPage() {
                 ))}</dl>
             </section>
 
+            <MonitoringOverview key={organisationId} organisationId={organisationId} services={services} />
+
             <div className="dashboard-sections">
                 {services.length === 0 ? <section className="card dashboard-empty" aria-labelledby="dashboard-empty-title">
                     <span className="dashboard-empty-icon"><Icon name="services" /></span>
@@ -112,11 +115,11 @@ export default function DashboardPage() {
 
                 <section className="card dashboard-monitoring" aria-labelledby="dashboard-monitoring-title">
                     <div className="dashboard-section-heading"><h2 id="dashboard-monitoring-title">Monitoring capabilities</h2>
-                        <p className="dashboard-muted">This dashboard reports service registration and configuration only.</p></div>
-                    <ul className="dashboard-capabilities">{["Health monitoring", "Uptime calculations", "Alerts", "Incidents"].map((feature) => (
+                        <p className="dashboard-muted">Scheduled HTTP checks are available. Other monitoring capabilities are listed below.</p></div>
+                    <ul className="dashboard-capabilities">{["Uptime calculations", "Alerts", "Incidents"].map((feature) => (
                         <li key={feature}><span>{feature}</span><span className="dashboard-unavailable">Not implemented</span></li>
                     ))}</ul>
-                    <p className="dashboard-monitoring-note">No health checks, uptime percentages, alert counts or incident statistics are available yet.</p>
+                    <p className="dashboard-monitoring-note">Health observations do not calculate uptime. Alert rules and incident management are not implemented.</p>
                 </section>
             </div>
         </div>

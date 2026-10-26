@@ -11,6 +11,8 @@ import { ApiError } from "../api/client";
 import type { MonitoredService } from "../types/MonitoredService";
 import Icon from "../components/Icon";
 import PageState from "../components/PageState";
+import ServiceMonitoring from "../components/ServiceMonitoring";
+import { healthKeys } from "../hooks/useMonitoring";
 import "../styles/service-details.css";
 
 const environmentLabels = {
@@ -32,6 +34,7 @@ export default function ServiceDetailsPage() {
             return getMonitoredService(organisationId, id);
         },
         enabled: Boolean(id && organisationId),
+        placeholderData: undefined,
     });
 
     if (!id) return <PageState variant="error" title="Service ID is missing." />;
@@ -44,6 +47,9 @@ export default function ServiceDetailsPage() {
         <PageState variant="error" title="Unable to load service" action={
             <button type="button" onClick={() => { void query.refetch(); }} disabled={query.isFetching}>Try again</button>
         }>{query.error?.message ?? "Service details are unavailable."}</PageState>
+    );
+    if (query.data.organisationId !== organisationId || query.data.id !== id) return (
+        <PageState variant="error" title="Unable to verify service data">The service response does not match the selected organisation and service.</PageState>
     );
 
     return (
@@ -85,6 +91,7 @@ function ServiceDetailsContent({ organisationId, serviceId, service, refreshing,
         await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["monitored-service", organisationId, serviceId] }),
             queryClient.invalidateQueries({ queryKey: ["monitored-services", organisationId] }),
+            queryClient.invalidateQueries({ queryKey: healthKeys.service(organisationId, serviceId) }),
         ]);
         setFeedback(`Service ${state} successfully.`);
         dialogRef.current?.close();
@@ -163,6 +170,8 @@ function ServiceDetailsContent({ organisationId, serviceId, service, refreshing,
 
             {feedback && <p role="status">{feedback}</p>}
 
+            <ServiceMonitoring organisationId={organisationId} service={service} />
+
             <div className="service-information-grid">
                 <section className="card service-information-card" aria-labelledby="service-overview-title">
                     <div><h2 id="service-overview-title">Service overview</h2><p className="service-muted">Registration and ownership</p></div>
@@ -179,7 +188,7 @@ function ServiceDetailsContent({ organisationId, serviceId, service, refreshing,
                         <div><dt>Base URL</dt><dd><code>{service.baseUrl}</code></dd></div>
                         <div><dt>Health endpoint</dt><dd><code>{service.healthEndpoint}</code></dd></div>
                     </dl>
-                    <p className="service-monitoring-note"><strong>Health monitoring is not yet available.</strong> No health checks or uptime results are reported here.</p>
+                    <p className="service-monitoring-note"><strong>Scheduled HTTP checks use this endpoint.</strong> Latest observations and bounded history are shown above. Uptime, alerting and incidents are not implemented.</p>
                 </section>
             </div>
 

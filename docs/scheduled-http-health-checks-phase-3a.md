@@ -209,13 +209,20 @@ address restrictions, including mixed DNS answers and rebinding lookup count.
 No production private-network exception is added. Other integration tests use
 disposable PostgreSQL containers; no business database or Keycloak account is changed.
 
-Commands from `backend` (existing cached Maven and dependencies, offline):
+Commands from `backend` (existing Maven distribution and project build configuration):
 
 ```powershell
 $maven = 'C:/Users/moham/.m2/wrapper/dists/apache-maven-3.9.16/0daed3be3ebd1c706f0e69e8b07c6b73f5cc4ea3dfce72a8d0ec2e849ca2ddb0/bin/mvn.cmd'
 & $maven '-Dmaven.repo.local=C:/Users/moham/.m2/repository' '-Duser.home=C:/Users/moham' -o test
 & $maven '-Dmaven.repo.local=C:/Users/moham/.m2/repository' '-Duser.home=C:/Users/moham' -o -DskipTests package
 ```
+
+The initial offline package attempt lacked transitive artifacts of the existing
+Maven JAR plugin. Running the same package command once without `-o` fetched those
+build-plugin artifacts from Maven Central and succeeded. The subsequent offline
+package command also succeeded. No POM, dependency versions or application
+dependencies were changed. Packaging skips tests because the full suite was run
+separately; it does not replace that verification.
 
 From `frontend`:
 
@@ -225,10 +232,38 @@ npm.cmd run build
 npm.cmd run test:run -- --maxWorkers=1 --testTimeout=15000
 ```
 
-Final results are recorded after the final scheduler regression run and packaging complete.
-The first complete backend run passed 345 tests. Initial sandbox compilation could
-not access an existing cached JAR; using authorised Maven/Docker access resolved it.
-One automatic review timed out before starting a later run; the permitted retry started successfully.
+Final verification results:
+
+| Check | Result |
+| --- | --- |
+| Full backend suite, including executor-separation regression | **346 passed; zero failures, errors or skips** |
+| Health runner / scheduler tests | 6 / 7 passed |
+| Outbound target policy / HTTP probe tests | 55 / 18 passed |
+| Health monitoring PostgreSQL integration tests | 7 passed |
+| Real-JWT tenant-isolation integration suite | 22 passed, including health API isolation |
+| Backend package and Spring Boot repackage | **Passed online, then passed offline** |
+| Frontend full suite | **183 passed across 12 files** |
+| Frontend lint / production build | **Passed / passed** |
+
+Executable artifact: `backend/target/backend-0.0.1-SNAPSHOT.jar`. Archive inspection
+confirmed the Spring Boot `JarLauncher` manifest, the OpsPilot start class, monitoring
+configuration/scheduler/controller classes and V6 migration. Packaging did not start
+the application or apply migrations to an existing business database.
+
+The continuation reviewed the existing implementation at commit `b0d8850`. The
+working tree was clean on resumption; the implementation and earlier frontend work
+were already present in that commit. No Git history was changed. No new critical
+correctness/security defect was reproduced, so this continuation changes only this
+document and completes packaging. The prior test reports total 346 backend tests;
+no production source changed after that run, so the suites were not repeated solely
+for documentation and packaging.
+
+Review confirmed tenant-scoped reads before result access, the composite tenant
+foreign key, bounded history, validated configuration, separate scheduling/deadline
+executors, identity-checked service locks, DNS-pinned connections, HTTPS peer
+verification and sanitised failure details. These checks establish the tested
+boundaries; they do not constitute a general penetration test or distributed-systems
+verification.
 
 ## Local verification and limitations
 

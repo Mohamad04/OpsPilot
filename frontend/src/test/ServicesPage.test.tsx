@@ -7,6 +7,10 @@ import userEvent from "@testing-library/user-event";
 import ServicesPage from "../pages/ServicesPage";
 import { getMonitoredServices } from "../api/monitoredServiceApi";
 import type { MonitoredService } from "../types/MonitoredService";
+import { getLatestHealth } from "../api/healthApi";
+import { unknownHealth } from "./healthFixtures";
+
+vi.mock("../api/healthApi", () => ({ getLatestHealth: vi.fn(), getHealthHistory: vi.fn() }));
 
 vi.mock("../api/monitoredServiceApi", () => ({ getMonitoredServices: vi.fn() }));
 const fixture = vi.hoisted(() => ({ organisation: {
@@ -25,6 +29,7 @@ const services: MonitoredService[] = [payment,
 ];
 beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getLatestHealth).mockImplementation(async (organisationId, serviceId) => unknownHealth(organisationId, serviceId));
     fixture.organisation = { currentOrganisation: { id: "organisation-123", name: "Engineering" }, organisationsPending: false, organisationsError: null };
     vi.mocked(getMonitoredServices).mockResolvedValue(services);
 });
@@ -53,7 +58,7 @@ test("loads the selected organisation's real registry with detail links and conf
     expect(within(table).getAllByText("Production")).toHaveLength(2);
     expect(within(table).getByText("Disabled")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Showing 1–3 of 3 services");
-    expect(screen.getByText(/Health monitoring is not yet available/)).toBeInTheDocument();
+    expect(screen.getByText(/HTTP health shows the latest recorded check/)).toBeInTheDocument();
     expect(screen.queryByText(/^(healthy|online)$/i)).not.toBeInTheDocument();
     expect(within(table).getAllByRole("columnheader")).toHaveLength(5);
     expect(within(table).getAllByRole("row")).toHaveLength(4);

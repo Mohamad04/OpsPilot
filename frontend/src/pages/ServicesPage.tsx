@@ -8,6 +8,7 @@ import { environmentValues, serviceTypes } from "../schemas/createMonitoredServi
 import type { MonitoredService } from "../types/MonitoredService";
 import Icon from "../components/Icon";
 import PageState from "../components/PageState";
+import { ServiceHealthCell } from "../components/ServiceMonitoring";
 import "../styles/services.css";
 
 const pageSize = 25;
@@ -24,6 +25,7 @@ export default function ServicesPage() {
             return getMonitoredServices(organisationId);
         },
         enabled: Boolean(organisationId),
+        placeholderData: undefined,
     });
 
     if (organisationsPending) return <PageState variant="loading" title="Loading organisations..." />;
@@ -32,6 +34,9 @@ export default function ServicesPage() {
 
     // A revoked membership must not leave previously cached tenant records visible.
     const accessDenied = query.error instanceof ApiError && [401, 403, 404].includes(query.error.status);
+    if (query.data?.some((service) => service.organisationId !== organisationId)) return (
+        <PageState variant="error" title="Unable to verify service data">The service response does not match the selected organisation.</PageState>
+    );
 
     return (
         <div className="services-page service-registry-page">
@@ -50,13 +55,13 @@ export default function ServicesPage() {
                 : <>
                     {query.isError && <div role="alert" className="registry-refresh-error"><p>Unable to refresh services. {query.error.message}</p>
                         <button type="button" className="button-secondary" disabled={query.isFetching} onClick={() => { void query.refetch(); }}>Retry refresh</button></div>}
-                    <ServiceRegistry key={organisationId} services={query.data} refreshing={query.isFetching} />
+                    <ServiceRegistry key={organisationId} organisationId={organisationId} services={query.data} refreshing={query.isFetching} />
                 </>}
         </div>
     );
 }
 
-function ServiceRegistry({ services, refreshing }: { services: MonitoredService[]; refreshing: boolean }) {
+function ServiceRegistry({ organisationId, services, refreshing }: { organisationId: string; services: MonitoredService[]; refreshing: boolean }) {
     const [search, setSearch] = useState("");
     const [environment, setEnvironment] = useState("");
     const [serviceType, setServiceType] = useState("");
@@ -128,10 +133,11 @@ function ServiceRegistry({ services, refreshing }: { services: MonitoredService[
                     <caption className="sr-only">Registered services. Enabled and Disabled describe configuration, not service health.</caption>
                     <thead role="rowgroup"><tr role="row">
                         <th scope="col" role="columnheader">Service</th><th scope="col" role="columnheader">Type</th>
-                        <th scope="col" role="columnheader">Environment</th><th scope="col" role="columnheader">Owner</th><th scope="col" role="columnheader">Status</th>
+                        <th scope="col" role="columnheader">Environment</th><th scope="col" role="columnheader">Owner</th><th scope="col" role="columnheader">Configuration</th>
                     </tr></thead>
                     <tbody role="rowgroup">{visible.map((service) => <tr key={service.id} role="row">
-                        <td role="cell" className="registry-service-cell"><Link to={`/services/${service.id}`}>{service.name}</Link><span className="registry-service-url">{service.baseUrl}</span></td>
+                        <td role="cell" className="registry-service-cell"><Link to={`/services/${service.id}`}>{service.name}</Link><span className="registry-service-url">{service.baseUrl}</span>
+                            <ServiceHealthCell organisationId={organisationId} service={service} /></td>
                         <td role="cell"><span className="registry-cell-label" aria-hidden="true">Type</span><span className="registry-badge">{service.serviceType}</span></td>
                         <td role="cell"><span className="registry-cell-label" aria-hidden="true">Environment</span><span className={`registry-badge registry-environment-${service.environment.toLowerCase()}`}>{environmentLabels[service.environment]}</span></td>
                         <td role="cell"><span className="registry-cell-label" aria-hidden="true">Owner</span>{service.owner || "Not specified"}</td>
@@ -139,7 +145,7 @@ function ServiceRegistry({ services, refreshing }: { services: MonitoredService[
                     </tr>)}</tbody>
                 </table>}
             <footer className="registry-footer">
-                <p className="registry-muted">Enabled is a configuration state. Health monitoring is not yet available.</p>
+                <p className="registry-muted">HTTP health shows the latest recorded check. Enabled and disabled describe configuration, independently of observed health.</p>
                 {pageCount > 1 && <nav className="registry-pagination" aria-label="Services pagination">
                     <button type="button" className="button-secondary" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} aria-label="Previous page"><Icon name="chevronLeft" /><span>Previous</span></button>
                     <span className="registry-page-number">Page {currentPage} of {pageCount}</span>

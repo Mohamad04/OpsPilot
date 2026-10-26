@@ -130,7 +130,7 @@ function ServiceRegistration({ organisationId, organisationName }: { organisatio
                     <section className="card registration-section" aria-labelledby="registration-endpoints-title">
                         <div className="registration-section-heading"><h2 id="registration-endpoints-title">Endpoints</h2><p className="registry-muted">Connection details for this service</p></div>
                         <div className="registration-fields">{endpointFields.map(renderField)}</div>
-                        <p className="registration-monitoring-note">Health monitoring is not yet available. Registering an endpoint does not report service health.</p>
+                        <p className="registration-monitoring-note">Enabled HTTP services are checked automatically after registration. Other protocols are not monitored yet.</p>
                     </section>
                 </div>
                 {createMutation.isError && <div role="alert" className="registration-error"><strong>Unable to register service</strong><p>{createMutation.error.message}</p><p>Your entries are preserved. Review the error before trying again.</p></div>}

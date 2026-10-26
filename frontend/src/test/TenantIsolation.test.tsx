@@ -11,6 +11,7 @@ import ServiceDetailsPage from "../pages/ServiceDetailsPage";
 import DashboardPage from "../pages/DashboardPage";
 import { endSession, getAccessToken } from "../auth/auth";
 import type { MonitoredService } from "../types/MonitoredService";
+import { unknownHealth } from "./healthFixtures";
 
 // Real provider, router, query cache and authenticated API clients; only HTTP/auth are controlled.
 vi.mock("../auth/auth", () => ({ getAccessToken: vi.fn(), endSession: vi.fn() }));
@@ -43,6 +44,8 @@ beforeEach(() => {
     fetchMock.mockImplementation(async (url, options) => {
         expect(new Headers(options.headers).get("Authorization")).toBe("Bearer disposable-test-token");
         const path = new URL(url).pathname;
+        const health = path.match(/^\/api\/organisations\/([^/]+)\/monitored-services\/([^/]+)\/health\/(latest|history)$/);
+        if (health) return json(health[3] === "latest" ? unknownHealth(health[1], health[2]) : []);
         if (!handlers[path]) throw new Error(`Unexpected tenant API path: ${path}`);
         return (await handlers[path]()).clone();
     });
