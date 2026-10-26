@@ -7,6 +7,7 @@ import {
     getMonitoredService,
 } from "../api/monitoredServiceApi";
 import { useOrganisation } from "../hooks/useOrganisation";
+import { ApiError } from "../api/client";
 import type { MonitoredService } from "../types/MonitoredService";
 import Icon from "../components/Icon";
 import PageState from "../components/PageState";
@@ -38,7 +39,8 @@ export default function ServiceDetailsPage() {
     if (organisationsError) return <PageState variant="error" title="Unable to load organisation">{organisationsError}</PageState>;
     if (!organisationId) return <PageState variant="empty" title="No organisation found.">Select an organisation to view its services.</PageState>;
     if (query.isPending) return <PageState variant="loading" title="Loading service..." />;
-    if (!query.data) return (
+    const accessDenied = query.error instanceof ApiError && [401, 403, 404].includes(query.error.status);
+    if (!query.data || accessDenied) return (
         <PageState variant="error" title="Unable to load service" action={
             <button type="button" onClick={() => { void query.refetch(); }} disabled={query.isFetching}>Try again</button>
         }>{query.error?.message ?? "Service details are unavailable."}</PageState>

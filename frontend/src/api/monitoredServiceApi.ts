@@ -1,6 +1,6 @@
 import type {MonitoredService} from "../types/MonitoredService";
 import { API_BASE_URL } from "./config";
-import { apiFetch } from "./client";
+import { ApiError, apiFetch } from "./client";
 import type {CreateMonitoredServiceRequest} from "../types/CreateMonitoredServiceRequest";
 
 export async function getMonitoredServices(
@@ -9,7 +9,7 @@ export async function getMonitoredServices(
     const url = `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services`;
     const response= await apiFetch(url);
     if (!response.ok) {
-        throw new Error("Could not get monitored services");
+        throw new ApiError(response.status, "Could not get monitored services");
     }
     return response.json();
 }
@@ -21,7 +21,7 @@ export async function getMonitoredService(
     const url = `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services/${monitoredServiceId}`;
     const response= await apiFetch(url);
     if (!response.ok) {
-        throw new Error("Could not get monitored service");
+        throw new ApiError(response.status, "Could not get monitored service");
     }
     return response.json();
 }

@@ -25,4 +25,6 @@ public interface MonitoredServiceRepository
     );
 
     List<MonitoredService> findAllByEnabled(boolean enabled);
+
+    List<MonitoredService> findByEnabledTrueAndServiceType(ServiceType serviceType);
 }
