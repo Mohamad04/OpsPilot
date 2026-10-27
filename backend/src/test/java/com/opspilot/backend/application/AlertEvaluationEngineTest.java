@@ -23,6 +23,7 @@ class AlertEvaluationEngineTest {
     @Mock AlertRuleRepository rules;
     @Mock AlertEvaluationStateRepository states;
     @Mock AlertRepository alerts;
+    @Mock IncidentCorrelationService incidents;
     private final UUID organisationId = UUID.randomUUID(), serviceId = UUID.randomUUID();
     private final Instant now = Instant.parse("2026-10-26T12:00:00Z");
     private MonitoredService service;
@@ -34,7 +35,7 @@ class AlertEvaluationEngineTest {
         service = MonitoredService.create(organisation, "Unit fixture", ServiceType.HTTP,
                 Environment.TEST, "https://fixture.example.test", "/health", "Test team");
         ReflectionTestUtils.setField(service, "id", serviceId);
-        engine = new AlertEvaluationEngine(services, results, rules, states, alerts, Clock.fixed(now, ZoneOffset.UTC));
+        engine = new AlertEvaluationEngine(services, results, rules, states, alerts, Clock.fixed(now, ZoneOffset.UTC), incidents);
     }
     private HealthCheckResult result(HealthStatus status) {
         var result = new HealthCheckResult(organisationId, serviceId, now.plusSeconds(1), now.plusSeconds(1), status, 503, 2, "Fixture failure");
@@ -47,7 +48,7 @@ class AlertEvaluationEngineTest {
 
     @Test void missingServiceAndMissingPersistedResultNeverReachRuleOrStateStorage() {
         engine.evaluate(organisationId, serviceId, UUID.randomUUID());
-        verifyNoInteractions(results, rules, states, alerts);
+        verifyNoInteractions(results, rules, states, alerts, incidents);
         when(services.findByIdAndOrganisationIdForUpdate(serviceId, organisationId)).thenReturn(Optional.of(service));
         engine.evaluate(organisationId, serviceId, UUID.randomUUID());
         verifyNoInteractions(rules, states, alerts);
@@ -62,6 +63,7 @@ class AlertEvaluationEngineTest {
         assertEquals(1, capture.getValue().getConsecutiveFailures());
         assertEquals(result.getId(), capture.getValue().getLastProcessedHealthCheckResultId());
         verify(rules, never()).save(any()); verify(alerts, never()).save(any());
+        verifyNoInteractions(incidents);
     }
 
     @Test void configuredThresholdOpensAlertUsingPersistedResultEvidence() {
@@ -69,11 +71,17 @@ class AlertEvaluationEngineTest {
         var rule = AlertRule.createDefault(organisationId, serviceId, now);
         rule.changeConfiguration(true, 1, 2, AlertSeverity.CRITICAL, now);
         when(rules.findByOrganisationIdAndMonitoredServiceId(organisationId, serviceId)).thenReturn(Optional.of(rule));
+        when(alerts.save(any())).thenAnswer(call -> {
+            Alert alert = call.getArgument(0);
+            ReflectionTestUtils.setField(alert, "id", UUID.randomUUID());
+            return alert;
+        });
         engine.evaluate(organisationId, serviceId, result.getId());
         ArgumentCaptor<Alert> capture = ArgumentCaptor.forClass(Alert.class); verify(alerts).save(capture.capture());
         assertEquals(AlertStatus.ACTIVE, capture.getValue().getStatus());
         assertEquals(AlertSeverity.CRITICAL, capture.getValue().getSeverity());
         assertEquals(result.getId(), capture.getValue().getTriggeringHealthCheckResultId());
+        verify(incidents).process(organisationId, serviceId, capture.getValue().getId());
     }
 
     @Test void disabledServiceConsumesNoFailureAndDoesNotReadOrWriteAlerts() {
@@ -81,6 +89,6 @@ class AlertEvaluationEngineTest {
         engine.evaluate(organisationId, serviceId, result.getId());
         ArgumentCaptor<AlertEvaluationState> capture = ArgumentCaptor.forClass(AlertEvaluationState.class);
         verify(states, times(2)).save(capture.capture());
-        assertEquals(0, capture.getValue().getConsecutiveFailures()); verifyNoInteractions(alerts);
+        assertEquals(0, capture.getValue().getConsecutiveFailures()); verifyNoInteractions(alerts, incidents);
     }
 }

@@ -6,5 +6,12 @@ public enum IncidentStatus {
     INVESTIGATING,
     MITIGATED,
     RESOLVED,
-    CLOSED
+    CLOSED;
+
+    public boolean isOngoing() {
+        return switch (this) {
+            case OPEN, ACKNOWLEDGED, INVESTIGATING, MITIGATED -> true;
+            case RESOLVED, CLOSED -> false;
+        };
+    }
 }

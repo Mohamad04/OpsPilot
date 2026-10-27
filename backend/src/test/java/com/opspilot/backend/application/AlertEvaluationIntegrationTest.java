@@ -60,6 +60,9 @@ class AlertEvaluationIntegrationTest {
     @MockitoBean Clock clock;
     @MockitoBean JwtDecoder decoder;
     @MockitoBean HealthTargetPolicy targetPolicy;
+    // Isolate Phase 3 evaluation/cleanup fixtures from the new append-only incident consumer.
+    // IncidentCorrelationIntegrationTest exercises the real end-to-end consumer and transaction rollback.
+    @MockitoBean IncidentCorrelationService incidentCorrelation;
     private final AtomicReference<Instant> current = new AtomicReference<>(BASE);
     private final AtomicInteger httpStatus = new AtomicInteger(503), hits = new AtomicInteger();
     private int second;
@@ -261,7 +264,7 @@ class AlertEvaluationIntegrationTest {
 
     @Test void newEngineInstanceContinuesPersistedStreakAfterEntityManagerAndTransactionBoundaries() {
         record(HealthStatus.DOWN); record(HealthStatus.DOWN);
-        var restarted = new AlertEvaluationEngine(services, results, rules, states, alerts, clock);
+        var restarted = new AlertEvaluationEngine(services, results, rules, states, alerts, clock, incidentCorrelation);
         var third = persist(first, HealthStatus.DOWN, tick());
         new TransactionTemplate(transactions).executeWithoutResult(status -> restarted.evaluate(alpha.getId(), first.getId(), third.getId()));
         assertEquals(3, state().getConsecutiveFailures()); assertEquals(1, alerts.count());

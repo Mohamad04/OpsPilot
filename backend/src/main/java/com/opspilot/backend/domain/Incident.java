@@ -18,6 +18,8 @@ public class Incident {
     private UUID id;
     @Column(nullable = false, updatable = false)
     private UUID organisationId;
+    @Column(updatable = false)
+    private UUID monitoredServiceId;
     @Column(nullable = false, length = TITLE_MAX_LENGTH)
     private String title;
     @Column(nullable = false, length = DESCRIPTION_MAX_LENGTH)
@@ -59,6 +61,30 @@ public class Incident {
         return value.strip();
     }
 
+    public static Incident openForAlert(Alert alert, Instant createdAt) {
+        Objects.requireNonNull(alert, "Alert is required");
+        Objects.requireNonNull(alert.getId(), "Persisted alert is required");
+        if (alert.getStatus() != AlertStatus.ACTIVE) {
+            throw new IllegalArgumentException("Only an ACTIVE alert can open an incident");
+        }
+        Incident incident = open(alert.getOrganisationId(), "HTTP availability incident",
+                "HTTP availability alert for monitored service " + alert.getMonitoredServiceId() + ".",
+                alert.getSeverity(), createdAt, null);
+        incident.monitoredServiceId = Objects.requireNonNull(alert.getMonitoredServiceId());
+        return incident;
+    }
+
+    /** Correlation may increase severity, but never reopen an incident or downgrade it. */
+    public void raiseSeverityTo(AlertSeverity incoming) {
+        Objects.requireNonNull(incoming, "Severity is required");
+        if (!status.isOngoing()) throw new IllegalStateException("A finished incident cannot be escalated");
+        if (severityRank(incoming) > severityRank(severity)) severity = incoming;
+    }
+
+    private static int severityRank(AlertSeverity value) {
+        return switch (value) { case LOW -> 1; case MEDIUM -> 2; case HIGH -> 3; case CRITICAL -> 4; };
+    }
+
     // Membership is a domain input, not a grant of permission. The database checks current membership too.
     static UUID memberUserId(UUID organisationId, OrganisationMembership membership) {
         if (membership == null) return null;
@@ -72,6 +98,7 @@ public class Incident {
 
     public UUID getId() { return id; }
     public UUID getOrganisationId() { return organisationId; }
+    public UUID getMonitoredServiceId() { return monitoredServiceId; }
     public String getTitle() { return title; }
     public String getDescription() { return description; }
     public AlertSeverity getSeverity() { return severity; }

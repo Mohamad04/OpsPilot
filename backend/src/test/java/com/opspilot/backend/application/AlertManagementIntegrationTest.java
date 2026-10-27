@@ -53,6 +53,8 @@ class AlertManagementIntegrationTest {
     @Autowired HealthCheckStore store;
     @Autowired JdbcTemplate jdbc;
     @MockitoBean JwtDecoder decoder;
+    // Query/evaluation assertions remain real; new append-only incident behavior has its own pipeline suite.
+    @MockitoBean IncidentCorrelationService incidentCorrelation;
     private Organisation alpha, beta;
     private MonitoredService first, sibling, foreign;
     private OrganisationMembership membership;

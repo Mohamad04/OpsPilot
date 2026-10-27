@@ -11,6 +11,8 @@ import java.util.UUID;
 public interface IncidentEventRepository extends Repository<IncidentEvent, UUID> {
     <S extends IncidentEvent> S save(S event);
     Optional<IncidentEvent> findByIdAndOrganisationId(UUID id, UUID organisationId);
+    Optional<IncidentEvent> findByOrganisationIdAndSourceAlertIdAndEventType(
+            UUID organisationId, UUID sourceAlertId, IncidentEventType eventType);
     Slice<IncidentEvent> findAllByOrganisationIdAndIncidentIdOrderByOccurredAtAscIdAsc(
             UUID organisationId, UUID incidentId, Pageable pageable);
 }

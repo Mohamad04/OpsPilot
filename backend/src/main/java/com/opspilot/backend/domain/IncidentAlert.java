@@ -26,6 +26,9 @@ public class IncidentAlert {
         if (!Objects.requireNonNull(incident.getOrganisationId()).equals(alert.getOrganisationId())) {
             throw new IllegalArgumentException("Incident and alert must belong to the same organisation");
         }
+        if (incident.getMonitoredServiceId() != null && !incident.getMonitoredServiceId().equals(alert.getMonitoredServiceId())) {
+            throw new IllegalArgumentException("An automatically correlated incident must match the alert's service");
+        }
         IncidentAlert link = new IncidentAlert();
         link.organisationId = incident.getOrganisationId();
         link.incidentId = Objects.requireNonNull(incident.getId(), "Persisted incident is required");

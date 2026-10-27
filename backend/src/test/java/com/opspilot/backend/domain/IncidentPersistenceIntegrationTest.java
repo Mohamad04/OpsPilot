@@ -93,7 +93,7 @@ class IncidentPersistenceIntegrationTest {
 
     @Test void flywayAndHibernateValidateTheCompleteSchema() {
         flyway.validate();
-        assertEquals("9", flyway.info().current().getVersion().getVersion());
+        assertEquals("10", flyway.info().current().getVersion().getVersion());
         assertEquals("validate", em.getEntityManager().getEntityManagerFactory().getProperties().get("hibernate.hbm2ddl.auto"));
         for (String table : new String[]{"incidents", "incident_alerts", "incident_events"}) {
             assertEquals(1, jdbc.queryForObject("select count(*) from information_schema.tables where table_schema='public' and table_name=?", Integer.class, table));

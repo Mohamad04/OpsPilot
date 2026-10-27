@@ -10,6 +10,7 @@ import java.util.UUID;
 public interface IncidentAlertRepository extends Repository<IncidentAlert, UUID> {
     <S extends IncidentAlert> S save(S link);
     Optional<IncidentAlert> findByIdAndOrganisationId(UUID id, UUID organisationId);
+    Optional<IncidentAlert> findFirstByOrganisationIdAndAlertIdOrderByIdAsc(UUID organisationId, UUID alertId);
     Slice<IncidentAlert> findAllByOrganisationIdAndIncidentIdOrderByIdAsc(
             UUID organisationId, UUID incidentId, Pageable pageable);
 }
