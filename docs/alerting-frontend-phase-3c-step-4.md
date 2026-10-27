@@ -1,5 +1,16 @@
 # Phase 3C Step 4 - React alerting frontend
 
+## Subsequent live validation
+
+The user subsequently confirmed the manual HTTP 200/UP -> HTTP 503/DOWN ->
+ACTIVE after three failures -> HTTP 200/UP -> RESOLVED after two recoveries
+lifecycle using the disposable Node demo and a localhost.run HTTPS tunnel.
+See [the alerting E2E validation report](alerting-e2e-validation.md) for the
+observations, reproduction steps, evidence boundaries and unverified cleanup
+status. The original implementation-time test and browser limitations below
+remain historical; this confirmation does not establish responsive or broader
+authorization checks.
+
 ## Starting point and scope
 
 Implementation started on `feat/alerting`, with a clean working tree and committed

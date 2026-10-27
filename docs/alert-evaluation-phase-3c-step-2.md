@@ -1,5 +1,9 @@
 # Phase 3C Step 2 - Persisted alert evaluation
 
+For the subsequent user-confirmed live three-failure activation and two-recovery
+resolution test, see [Alerting E2E validation](alerting-e2e-validation.md).
+That report separates manual observations from automated implementation tests.
+
 This increment evaluates HTTP availability alerts after accepted health checks.
 It adds no public alert endpoints, frontend, notifications, incidents or external
 messaging infrastructure. Phase 3C.1 rule APIs and their RBAC remain unchanged.
