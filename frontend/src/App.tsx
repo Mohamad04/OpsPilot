@@ -5,6 +5,8 @@ import AppLayout from "./layouts/AppLayout";
 import ServiceDetailsPage from "./pages/ServiceDetailsPage";
 import AddServicePage from "./pages/AddServicePage";
 import CreateOrganisationPage from "./pages/CreateOrganisationPage";
+import AlertsPage from "./pages/AlertsPage";
+import AlertDetailsPage from "./pages/AlertDetailsPage";
 
 function App() {
   return (
@@ -14,6 +16,8 @@ function App() {
             <Route path="services" element={<ServicesPage />} />
             <Route path="services/new" element={<AddServicePage/>} />
             <Route path="services/:id" element={<ServiceDetailsPage />} />
+            <Route path="alerts" element={<AlertsPage />} />
+            <Route path="alerts/:alertId" element={<AlertDetailsPage />} />
             <Route path="organisations/new" element={<CreateOrganisationPage />} />
         </Route>
       </Routes>

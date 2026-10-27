@@ -4,10 +4,11 @@ import { ApiError, apiFetch } from "./client";
 import type {CreateMonitoredServiceRequest} from "../types/CreateMonitoredServiceRequest";
 
 export async function getMonitoredServices(
-    organisationId : string
+    organisationId : string,
+    signal?: AbortSignal
     ): Promise<MonitoredService[]> {
     const url = `${API_BASE_URL}/api/organisations/${organisationId}/monitored-services`;
-    const response= await apiFetch(url);
+    const response= await apiFetch(url, signal ? { signal } : undefined);
     if (!response.ok) {
         throw new ApiError(response.status, "Could not get monitored services");
     }

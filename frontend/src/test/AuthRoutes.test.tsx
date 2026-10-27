@@ -28,6 +28,8 @@ vi.mock("../pages/ServicesPage", () => ({ default: () => <p>Services route</p> }
 vi.mock("../pages/AddServicePage", () => ({ default: () => <p>Add service route</p> }));
 vi.mock("../pages/ServiceDetailsPage", () => ({ default: () => <p>Service details route</p> }));
 vi.mock("../pages/CreateOrganisationPage", () => ({ default: () => <p>Create organisation route</p> }));
+vi.mock("../pages/AlertsPage", () => ({ default: () => <p>Alerts route</p> }));
+vi.mock("../pages/AlertDetailsPage", () => ({ default: () => <p>Alert details route</p> }));
 
 beforeEach(() => {
     fixture.state = { status: "authenticated", user: { subject: "user", displayName: "Alex Example" }, message: null };
@@ -48,6 +50,7 @@ test.each([
     ["/", "Dashboard route"], ["/services", "Services route"],
     ["/services/new", "Add service route"], ["/services/service-123", "Service details route"],
     ["/organisations/new", "Create organisation route"],
+    ["/alerts", "Alerts route"], ["/alerts/alert-1", "Alert details route"],
 ])("authenticated route %s retains its existing page and user header", (path, page) => {
     renderRoute(path);
     expect(screen.getByText(page)).toBeInTheDocument();

@@ -10,6 +10,12 @@ import { ApiError } from "../api/client";
 import type { MonitoredService } from "../types/MonitoredService";
 import { getHealthHistory, getLatestHealth } from "../api/healthApi";
 import { unknownHealth } from "./healthFixtures";
+import { alertPage, defaultAlertRule } from "./alertFixtures";
+import { getAlertRule } from "../api/alertRuleApi";
+import { getAlerts } from "../api/alertApi";
+
+vi.mock("../api/alertRuleApi", () => ({ getAlertRule: vi.fn(), putAlertRule: vi.fn() }));
+vi.mock("../api/alertApi", () => ({ getAlerts: vi.fn(), getAlert: vi.fn(), getAlertSummary: vi.fn() }));
 
 vi.mock("../api/healthApi", () => ({ getLatestHealth: vi.fn(), getHealthHistory: vi.fn() }));
 
@@ -30,6 +36,8 @@ const service: MonitoredService = {
 
 beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(getAlertRule).mockImplementation(async (org, serviceId) => defaultAlertRule(org, serviceId));
+    vi.mocked(getAlerts).mockResolvedValue(alertPage([], 0, 5));
     vi.mocked(getLatestHealth).mockImplementation(async (organisationId, serviceId) => unknownHealth(organisationId, serviceId));
     vi.mocked(getHealthHistory).mockResolvedValue([]);
     fixture.organisation = { currentOrganisation: { id: service.organisationId }, organisationsPending: false, organisationsError: null };

@@ -12,6 +12,7 @@ import type { MonitoredService } from "../types/MonitoredService";
 import Icon from "../components/Icon";
 import PageState from "../components/PageState";
 import ServiceMonitoring from "../components/ServiceMonitoring";
+import { AlertConfiguration, ServiceAlertHistory } from "../components/ServiceAlerts";
 import { healthKeys } from "../hooks/useMonitoring";
 import "../styles/service-details.css";
 
@@ -171,6 +172,8 @@ function ServiceDetailsContent({ organisationId, serviceId, service, refreshing,
             {feedback && <p role="status">{feedback}</p>}
 
             <ServiceMonitoring organisationId={organisationId} service={service} />
+            {service.serviceType === "HTTP" && <AlertConfiguration organisationId={organisationId} service={service} />}
+            <ServiceAlertHistory organisationId={organisationId} service={service} />
 
             <div className="service-information-grid">
                 <section className="card service-information-card" aria-labelledby="service-overview-title">
@@ -188,7 +191,7 @@ function ServiceDetailsContent({ organisationId, serviceId, service, refreshing,
                         <div><dt>Base URL</dt><dd><code>{service.baseUrl}</code></dd></div>
                         <div><dt>Health endpoint</dt><dd><code>{service.healthEndpoint}</code></dd></div>
                     </dl>
-                    <p className="service-monitoring-note"><strong>Scheduled HTTP checks use this endpoint.</strong> Latest observations and bounded history are shown above. Uptime, alerting and incidents are not implemented.</p>
+                    <p className="service-monitoring-note"><strong>Scheduled HTTP checks use this endpoint.</strong> Latest observations and bounded history are shown above. HTTP alert rules and history are available. Uptime and incidents are not implemented.</p>
                 </section>
             </div>
 

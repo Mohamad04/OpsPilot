@@ -10,6 +10,7 @@ import { healthKeys, useLatestHealth } from "../hooks/useMonitoring";
 import { getAccessToken, endSession } from "../auth/auth";
 import type { MonitoredService } from "../types/MonitoredService";
 import { recordedHealth, unknownHealth } from "./healthFixtures";
+import { emptyAlertResponse } from "./alertFixtures";
 
 // Real routes, shell, organisation provider, monitoring APIs and cache; controlled HTTP/auth fixtures.
 vi.mock("../auth/auth", () => ({ getAccessToken: vi.fn(), endSession: vi.fn(), logout: vi.fn() }));
@@ -42,6 +43,8 @@ beforeEach(() => {
         expect(new Headers(options.headers).get("Authorization")).toBe("Bearer monitoring-integration-token");
         const path = new URL(url).pathname;
         if (handlers[path]) return (await handlers[path]()).clone();
+        const alerts = emptyAlertResponse(url);
+        if (alerts !== undefined) return json(alerts);
         if (path === "/api/organisations") return json([alpha, beta]);
         const parts = path.match(/^\/api\/organisations\/([^/]+)\/monitored-services(?:\/([^/]+))?(?:\/health\/(latest|history))?$/);
         if (!parts) throw new Error(`Unexpected monitoring API request: ${path}`);
@@ -84,7 +87,7 @@ test("dashboard counts actual latest statuses and excludes disabled and unsuppor
     expect(screen.getByText(/1 paused service/)).toBeInTheDocument();
     expect(healthCalls(alpha.id, "alpha-paused")).toHaveLength(0);
     expect(healthCalls(alpha.id, "alpha-tcp")).toHaveLength(0);
-    expect(screen.getAllByText("Not implemented")).toHaveLength(3);
+    expect(screen.getAllByText("Not implemented")).toHaveLength(2);
     expect(screen.queryByText(/\d+\s*%/)).not.toBeInTheDocument();
 });
 

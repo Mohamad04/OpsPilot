@@ -38,6 +38,7 @@ function renderLayout(path = "/") {
         <Routes><Route element={<AppLayout />}>
             <Route path="/" element={<h1>Dashboard content</h1>} />
             <Route path="/services" element={<h1>Services content</h1>} />
+            <Route path="/alerts" element={<h1>Alerts content</h1>} />
             <Route path="/organisations/new" element={<h1>Creation form</h1>} />
         </Route></Routes>
     </MemoryRouter></StrictMode>);
@@ -98,6 +99,17 @@ test("moving to the rail breakpoint closes an open drawer and focuses content", 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("main")).toHaveFocus();
     expect(document.body.style.overflow).toBe("");
+});
+
+test("Alerts is accessible in desktop navigation and keyboard-operated mobile drawer", async () => {
+    renderLayout(); const user = userEvent.setup();
+    expect(screen.getByRole("link", { name: "Alerts" })).toHaveAttribute("href", "/alerts");
+    await user.click(screen.getByRole("button", { name: "Open navigation" }));
+    const link = within(screen.getByRole("dialog")).getByRole("link", { name: "Alerts" });
+    link.focus(); await user.keyboard("{Enter}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alerts content" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Alerts" })).toHaveAttribute("aria-current", "page");
 });
 
 test("desktop collapse control retains a keyboard accessible expand action", async () => {

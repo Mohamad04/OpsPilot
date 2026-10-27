@@ -12,6 +12,7 @@ import { endSession, getAccessToken } from "../auth/auth";
 import type { Organisation } from "../types/Organisation";
 import type { MonitoredService } from "../types/MonitoredService";
 import { unknownHealth } from "./healthFixtures";
+import { emptyAlertResponse } from "./alertFixtures";
 
 // Exercise the real provider, API clients and query cache with controlled HTTP.
 vi.mock("../auth/auth", () => ({ getAccessToken: vi.fn(), endSession: vi.fn() }));
@@ -40,6 +41,8 @@ beforeEach(() => {
     serviceResponses = { alpha: async () => json(alphaServices), beta: async () => json([]) };
     fetchMock.mockImplementation(async (url) => {
         const path = new URL(url).pathname;
+        const alerts = emptyAlertResponse(url);
+        if (alerts !== undefined) return json(alerts);
         if (path === "/api/organisations") return (await organisationsResponse()).clone();
         const health = path.match(/^\/api\/organisations\/([^/]+)\/monitored-services\/([^/]+)\/health\/latest$/);
         if (health) return json(unknownHealth(health[1], health[2]));
@@ -128,15 +131,15 @@ test("an empty organisation has real zero totals, an onboarding action and no fa
     expect(screen.getByRole("heading", { name: "Service registration route" })).toBeInTheDocument();
 });
 
-test("HTTP monitoring is available while uptime, alerts and incidents remain unavailable", async () => {
+test("HTTP monitoring and real alert counts are available while uptime and incidents remain unavailable", async () => {
     renderDashboard();
     const monitoring = await screen.findByRole("region", { name: "Monitoring capabilities" });
-    expect(within(monitoring).getAllByText("Not implemented")).toHaveLength(3);
-    for (const feature of ["Uptime calculations", "Alerts", "Incidents"]) {
+    expect(within(monitoring).getAllByText("Not implemented")).toHaveLength(2);
+    for (const feature of ["Uptime calculations", "Incidents"]) {
         expect(within(monitoring).getByText(feature).closest("li")).toHaveTextContent("Not implemented");
     }
     expect(screen.getByText(/Enabled does not mean healthy/)).toBeInTheDocument();
-    expect(screen.queryByText("Active alerts")).not.toBeInTheDocument();
+    expect(await screen.findByRole("group", { name: "Active alerts" })).toHaveTextContent("0");
     expect(screen.queryByText(/\d+\s*%/)).not.toBeInTheDocument();
     expect(within(monitoring).queryByText(/^\d+$/)).not.toBeInTheDocument();
 });
