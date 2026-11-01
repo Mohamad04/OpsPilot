@@ -22,12 +22,14 @@ public class AlertEvaluationEngine {
     private final AlertEvaluationStateRepository states;
     private final AlertRepository alerts;
     private final Clock clock;
+    private final IncidentCorrelationService incidents;
 
     public AlertEvaluationEngine(MonitoredServiceRepository services, HealthCheckResultRepository results,
                                   AlertRuleRepository rules, AlertEvaluationStateRepository states,
-                                  AlertRepository alerts, Clock clock) {
+                                  AlertRepository alerts, Clock clock, IncidentCorrelationService incidents) {
         this.services = services; this.results = results; this.rules = rules;
         this.states = states; this.alerts = alerts; this.clock = clock;
+        this.incidents = incidents;
     }
 
     public void evaluate(UUID organisationId, UUID serviceId, UUID resultId) {
@@ -51,11 +53,15 @@ public class AlertEvaluationEngine {
                         active = Alert.open(result, state.getFirstFailureHealthCheckResultId(), state.getFirstFailureAt(),
                                 state.getConsecutiveFailures(), rule.getConsecutiveFailures(), rule.getConsecutiveRecoveries(), rule.getSeverity());
                     }
-                    if (active != null) alerts.save(active);
+                    if (active != null) {
+                        alerts.save(active);
+                        incidents.process(organisationId, serviceId, active.getId());
+                    }
                 }
                 case UP -> {
                     if (active != null && state.getConsecutiveRecoveries() >= rule.getConsecutiveRecoveries()) {
                         active.resolve(result, rule.getConsecutiveRecoveries()); alerts.save(active);
+                        incidents.process(organisationId, serviceId, active.getId());
                     }
                 }
                 case UNKNOWN -> { /* State consumed the interruption; keep all alert history untouched. */ }

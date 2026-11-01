@@ -9,7 +9,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "e2e": "node tools/playwright.mjs test",
+    "e2e:install": "node tools/playwright.mjs install chromium",
+    "e2e:list": "node tools/playwright.mjs test --list",
+    "e2e:acceptance": "node tools/playwright.mjs test --require-complete",
+    "e2e:check-env": "node tools/check-e2e-env.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",
@@ -23,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.64.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",

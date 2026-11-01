@@ -131,8 +131,25 @@ class TenantIsolationIntegrationTest {
         assertEquals(0, memberships.findAllByUserId(users.findByIdentityProviderSubject("outsider").orElseThrow().getId()).size());
     }
 
+    @Test
+    void organisationContextExposesOnlyTheAuthenticatedLocalMembershipNotJwtRoles() throws Exception {
+        UUID localUserId = users.findByIdentityProviderSubject("dual").orElseThrow().getId();
+        JsonNode list = JSON.readTree(expect(call("GET", "/api/organisations", dual, null), 200).body());
+        assertEquals(2, list.size());
+        for (JsonNode org : list) {
+            String expectedRole = org.get("id").asText().equals(alpha.toString()) ? "ENGINEER" : "VIEWER";
+            assertEquals(localUserId.toString(), org.get("currentUserId").asText());
+            assertEquals(expectedRole, org.get("currentUserRole").asText());
+            JsonNode detail = JSON.readTree(expect(call("GET", "/api/organisations/" + org.get("id").asText(), dual, null), 200).body());
+            assertEquals(org, detail);
+        }
+        // This token claims OWNER, yet cannot change an incident as a local VIEWER.
+        expect(operation("incident-write", beta, betaService, dual), 403);
+        expect(call("GET", "/api/organisations/" + beta, alice, null), 404);
+    }
+
     @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write",
-            "alerts", "alert-details", "alert-history", "alert-summary"})
+            "alerts", "alert-details", "alert-history", "alert-summary", "incidents", "incident-details", "incident-events", "incident-write", "incident-assign", "incident-comment", "members", "member-add", "member-change", "member-remove"})
     void unauthorisedTenantAndUnknownTenantAreIndistinguishable(String operation) throws Exception {
         HttpResponse<String> denied = operation(operation, beta, betaService, alice);
         HttpResponse<String> absent = operation(operation, UUID.randomUUID(), UUID.randomUUID(), alice);
@@ -159,7 +176,7 @@ class TenantIsolationIntegrationTest {
         assertUnchanged();
     }
 
-    @ParameterizedTest @ValueSource(strings = {"create", "enable", "disable", "alert-write"})
+    @ParameterizedTest @ValueSource(strings = {"create", "enable", "disable", "alert-write", "incident-write", "incident-assign", "incident-comment", "member-add", "member-change", "member-remove"})
     void rolesAreLocalToEachOrganisationAndCannotBeElevatedByJwtClaims(String operation) throws Exception {
         // The same signed token claims OWNER, but the database gives this user VIEWER in Beta.
         expect(operation(operation, beta, betaService, dual), 403);
@@ -247,7 +264,7 @@ class TenantIsolationIntegrationTest {
     }
 
     @ParameterizedTest @ValueSource(strings = {"organisation", "list", "read", "create", "enable", "disable", "alert-read", "alert-write",
-            "alerts", "alert-details", "alert-history", "alert-summary"})
+            "alerts", "alert-details", "alert-history", "alert-summary", "incidents", "incident-details", "incident-events", "incident-write", "incident-assign", "incident-comment", "members", "member-add", "member-change", "member-remove"})
     void everyScopedOperationRejectsMissingMalformedAndInvalidSignedTokens(String operation) throws Exception {
         for (String identity : new String[]{null, "invalid",
                 token("alice", ISSUER, "wrong-api", KEYS, 300),
@@ -318,8 +335,33 @@ class TenantIsolationIntegrationTest {
         assertEquals(0, alertRules.count());
     }
 
+    @Test void signedJwtIncidentReadsAndLocalViewerPermissionsUseExistingSecurity() throws Exception {
+        String own = "/api/organisations/" + alpha + "/incidents";
+        String other = "/api/organisations/" + beta + "/incidents";
+        assertEquals(0, JSON.readTree(expect(call("GET", own, alice, null), 200).body()).get("totalElements").asLong());
+        expect(call("GET", other, dual, null), 200); // Local VIEWER despite signed realm OWNER claim.
+        expect(call("PATCH", other + "/" + UUID.randomUUID() + "/status", dual,
+                "{\"status\":\"ACKNOWLEDGED\",\"expectedVersion\":0}"), 403);
+        expect(call("GET", own + "/" + UUID.randomUUID() + "/events", alice, null), 404);
+        assertUnchanged();
+    }
+
     private HttpResponse<String> operation(String operation, UUID tenant, UUID service, String identity) throws Exception {
         return switch (operation) {
+            case "members" -> call("GET", "/api/organisations/" + tenant + "/members", identity, null);
+            case "member-add" -> call("POST", "/api/organisations/" + tenant + "/members", identity,
+                    "{\"userId\":\"" + service + "\",\"role\":\"VIEWER\"}");
+            case "member-change" -> call("PATCH", "/api/organisations/" + tenant + "/members/" + service, identity, "{\"role\":\"VIEWER\"}");
+            case "member-remove" -> call("DELETE", "/api/organisations/" + tenant + "/members/" + service, identity, null);
+            case "incidents" -> call("GET", "/api/organisations/" + tenant + "/incidents", identity, null);
+            case "incident-details" -> call("GET", "/api/organisations/" + tenant + "/incidents/" + service, identity, null);
+            case "incident-events" -> call("GET", "/api/organisations/" + tenant + "/incidents/" + service + "/events", identity, null);
+            case "incident-write" -> call("PATCH", "/api/organisations/" + tenant + "/incidents/" + service + "/status", identity,
+                    "{\"status\":\"ACKNOWLEDGED\",\"expectedVersion\":0}");
+            case "incident-assign" -> call("PATCH", "/api/organisations/" + tenant + "/incidents/" + service + "/assignee", identity,
+                    "{\"assigneeUserId\":null,\"expectedVersion\":0}");
+            case "incident-comment" -> call("POST", "/api/organisations/" + tenant + "/incidents/" + service + "/comments", identity,
+                    "{\"content\":\"Authenticated fixture comment\"}");
             case "alerts" -> call("GET", "/api/organisations/" + tenant + "/alerts", identity, null);
             case "alert-details" -> call("GET", "/api/organisations/" + tenant + "/alerts/" + service, identity, null);
             case "alert-history" -> call("GET", base(tenant) + "/" + service + "/alerts", identity, null);
@@ -333,6 +375,21 @@ class TenantIsolationIntegrationTest {
                     "{\"enabled\":true,\"consecutiveFailures\":3,\"consecutiveRecoveries\":2,\"severity\":\"HIGH\"}");
             default -> call("PATCH", base(tenant) + "/" + service + "/" + operation, identity, null);
         };
+    }
+
+    @Test void memberDirectoryUsesRealJwtAndLocalTenantScopeWithoutIdentitySecrets() throws Exception {
+        for (String identity : List.of(alice, dual)) {
+            JsonNode directory = JSON.readTree(expect(call("GET", "/api/organisations/" + alpha + "/members", identity, null), 200).body());
+            assertEquals(2, directory.get("totalElements").asLong());
+            for (JsonNode member : directory.get("content")) {
+                assertEquals(alpha.toString(), member.get("organisationId").asText());
+                assertTrue(member.has("userId")); assertFalse(member.has("email"));
+                assertFalse(member.has("identityProviderSubject"));
+            }
+        }
+        expect(call("GET", "/api/organisations/" + beta + "/members", dual, null), 200);
+        expect(call("GET", "/api/organisations/" + beta + "/members", alice, null), 404);
+        assertUnchanged();
     }
 
     private HttpResponse<String> call(String method, String path, String token, String body) throws Exception {

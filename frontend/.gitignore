@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Isolated Playwright browser binaries and potentially sensitive local diagnostics.
+.playwright-browsers/
+playwright-report/
+test-results/

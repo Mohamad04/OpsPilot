@@ -50,6 +50,8 @@ class OrganisationResponseServiceTest {
         assertEquals("acme", result.getFirst().slug());
         assertEquals(OrganisationStatus.INACTIVE, result.getFirst().status());
         assertEquals(organisation.getCreatedAt(), result.getFirst().createdAt());
+        assertEquals(USER_ID, result.getFirst().currentUserId());
+        assertEquals(OrganisationRole.VIEWER, result.getFirst().currentUserRole());
         verify(membershipRepository).findAllWithOrganisationByUserId(USER_ID);
     }
 
@@ -57,7 +59,10 @@ class OrganisationResponseServiceTest {
     void detailRequiresMembershipBeforeMappingOrganisation() {
         when(membershipRepository.findByOrganisationIdAndUserId(ORGANISATION_ID, USER_ID)).thenReturn(Optional.of(
                 OrganisationMembership.create(organisation, user, OrganisationRole.VIEWER)));
-        assertEquals("Acme", service.getOrganisation("subject", ORGANISATION_ID).name());
+        OrganisationResponse result = service.getOrganisation("subject", ORGANISATION_ID);
+        assertEquals("Acme", result.name());
+        assertEquals(USER_ID, result.currentUserId());
+        assertEquals(OrganisationRole.VIEWER, result.currentUserRole());
         verify(membershipRepository).findByOrganisationIdAndUserId(ORGANISATION_ID, USER_ID);
         verifyNoInteractions(organisationService);
     }
@@ -77,6 +82,8 @@ class OrganisationResponseServiceTest {
         when(membershipRepository.save(any(OrganisationMembership.class))).thenAnswer(call -> call.getArgument(0));
         OrganisationResponse result = service.createOrganisationWithOwner("subject", "Acme", "acme");
         assertEquals("Acme", result.name());
+        assertEquals(USER_ID, result.currentUserId());
+        assertEquals(OrganisationRole.OWNER, result.currentUserRole());
         ArgumentCaptor<OrganisationMembership> membership = ArgumentCaptor.forClass(OrganisationMembership.class);
         verify(membershipRepository).save(membership.capture());
         assertSame(user, membership.getValue().getUser());

@@ -43,7 +43,7 @@ function Details({ organisationId, name, alertId }: { organisationId: string; na
                             {([ ["First failure evidence", alert.firstFailureHealthCheckResultId], ["Triggering evidence", alert.triggeringHealthCheckResultId],
                                 ["Last failure evidence", alert.lastFailureHealthCheckResultId], ["Resolution evidence", alert.resolutionHealthCheckResultId] ] as const).map(([label, value]) =>
                                 <div key={label}><dt>{label}</dt><dd>{value ? <code>{value}</code> : "Not available"}</dd></div>)}
-                        </dl><p className="alert-muted">Evidence identifiers reference persisted health checks. Incident timelines and root-cause analysis are not implemented.</p>
+                        </dl><p className="alert-muted">Evidence identifiers reference persisted health checks. Review incident timelines in <Link to="/incidents">Incidents</Link>. Root-cause analysis is not implemented.</p>
                     </section>
                 </div>
             </>}

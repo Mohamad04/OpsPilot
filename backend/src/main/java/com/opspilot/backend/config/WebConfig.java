@@ -31,7 +31,8 @@ public class WebConfig implements WebMvcConfigurer {
                 )
                 .allowedHeaders(
                         "Authorization",
-                        "Content-Type"
+                        "Content-Type",
+                        "Idempotency-Key"
                 );
     }
 }

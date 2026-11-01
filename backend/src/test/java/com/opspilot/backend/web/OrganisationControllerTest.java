@@ -5,6 +5,7 @@ import com.opspilot.backend.application.exception.OrganisationMembershipNotFound
 import com.opspilot.backend.application.exception.OrganisationSlugAlreadyExistsException;
 import com.opspilot.backend.config.SecurityConfig;
 import com.opspilot.backend.domain.OrganisationStatus;
+import com.opspilot.backend.domain.OrganisationRole;
 import com.opspilot.backend.domain.exception.InvalidOrganisationNameException;
 import com.opspilot.backend.web.dto.OrganisationResponse;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OrganisationControllerTest {
     private static final String SUBJECT = "keycloak-user-123";
     private static final UUID ID = UUID.randomUUID();
+    private static final UUID USER_ID = UUID.randomUUID();
     private static final OrganisationResponse ORGANISATION = new OrganisationResponse(
-            ID, "Acme", "acme", OrganisationStatus.INACTIVE, Instant.parse("2026-10-07T10:00:00Z"));
+            ID, "Acme", "acme", OrganisationStatus.INACTIVE, Instant.parse("2026-10-07T10:00:00Z"),
+            USER_ID, OrganisationRole.OWNER);
 
     @Autowired MockMvc mockMvc;
     @MockitoBean OrganisationMembershipService organisationMembershipService;
@@ -48,7 +51,9 @@ class OrganisationControllerTest {
                 .andExpect(jsonPath("$.slug").value("acme"))
                 .andExpect(jsonPath("$.status").value("INACTIVE"))
                 .andExpect(jsonPath("$.createdAt").value("2026-10-07T10:00:00Z"))
-                .andExpect(jsonPath("$.length()").value(5));
+                .andExpect(jsonPath("$.currentUserId").value(USER_ID.toString()))
+                .andExpect(jsonPath("$.currentUserRole").value("OWNER"))
+                .andExpect(jsonPath("$.length()").value(7));
         verify(organisationMembershipService).createOrganisationWithOwner(SUBJECT, "Acme", "acme");
     }
 
@@ -59,7 +64,9 @@ class OrganisationControllerTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(ID.toString()))
                 .andExpect(jsonPath("$[0].name").value("Acme"))
-                .andExpect(jsonPath("$[0].length()").value(5));
+                .andExpect(jsonPath("$[0].currentUserId").value(USER_ID.toString()))
+                .andExpect(jsonPath("$[0].currentUserRole").value("OWNER"))
+                .andExpect(jsonPath("$[0].length()").value(7));
         verify(organisationMembershipService).getOrganisations(SUBJECT);
     }
 
@@ -75,7 +82,9 @@ class OrganisationControllerTest {
         when(organisationMembershipService.getOrganisation(SUBJECT, ID)).thenReturn(ORGANISATION);
         mockMvc.perform(get("/api/organisations/" + ID).with(jwt().jwt(token -> token.subject(SUBJECT))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Acme"))
-                .andExpect(jsonPath("$.length()").value(5));
+                .andExpect(jsonPath("$.currentUserId").value(USER_ID.toString()))
+                .andExpect(jsonPath("$.currentUserRole").value("OWNER"))
+                .andExpect(jsonPath("$.length()").value(7));
         verify(organisationMembershipService).getOrganisation(SUBJECT, ID);
     }
 

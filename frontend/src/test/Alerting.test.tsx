@@ -98,7 +98,8 @@ test("registry shows real active/resolved alerts, names, category, counts and de
     expect(await screen.findByRole("heading", { name: "HTTP availability alert" })).toBeInTheDocument();
     expect(screen.getByText("health-1")).toBeInTheDocument();
     expect(screen.getByText("503")).toBeInTheDocument(); expect(screen.getByText("25 ms")).toBeInTheDocument();
-    expect(screen.getByText(/Incident timelines and root-cause analysis are not implemented/)).toBeInTheDocument();
+    expect(within(screen.getByRole("main")).getByRole("link", { name: "Incidents" })).toHaveAttribute("href", "/incidents");
+    expect(screen.getByText(/Root-cause analysis is not implemented/)).toBeInTheDocument();
 });
 test("resolved details expose actual resolution evidence and recovery threshold", async () => {
     mount("/alerts/alert-2");
