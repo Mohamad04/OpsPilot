@@ -1,4 +1,4 @@
-# Keycloak authentication milestone
+make n# Keycloak authentication milestone
 
 Automatic provisioning was added in the subsequent milestone. See
 [user-provisioning.md](user-provisioning.md) for the current account policy,
@@ -81,6 +81,14 @@ be rejected using the existing 404 behavior. Keycloak realm/client roles are not
 converted into organisation memberships.
 
 ## Keycloak Admin Console configuration
+
+A fresh Keycloak volume now gets this configuration automatically: Docker Compose
+starts Keycloak with `--import-realm` and mounts
+`infrastructure/keycloak/opspilot-realm.json`, which defines the realm, the
+`opspilot-frontend` client, the `opspilot-backend` audience mapper and a local
+`demo`/`demo` user with a verified email. An existing `opspilot` realm is not
+overwritten. The manual steps below still apply to installations created before
+the import file existed.
 
 Read-only inspection of the running Keycloak instance on 2026-10-22 confirmed:
 
