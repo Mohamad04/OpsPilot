@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Testcontainers
 class ResponseDtoIntegrationTest {
     @org.springframework.test.context.bean.override.mockito.MockitoBean AlertEvaluationEngine evaluator;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean java.time.Clock clock;
     @Container
     @ServiceConnection
     static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:18.4-alpine");

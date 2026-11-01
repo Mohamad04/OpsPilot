@@ -1,5 +1,10 @@
 # Phase 4B - Automatic incident creation and alert correlation
 
+The subsequent [Phase 4C lifecycle/API report](incident-lifecycle-api-phase-4c.md)
+documents manual transitions, versioning and new ALERT_RESOLVED events. The
+COMMENT_ADDED recovery description below records Phase 4B behavior; existing
+recovery notes remain immutable and are deduplicated across the upgrade.
+
 ## Starting point and scope
 
 Implementation continued on `feature/phase4-incident-management` from committed

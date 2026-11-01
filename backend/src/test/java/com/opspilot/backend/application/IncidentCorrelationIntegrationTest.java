@@ -114,7 +114,7 @@ class IncidentCorrelationIntegrationTest {
     }
 
     @Test void phase4aAndV10MigrateAndValidateWithoutBackfilling() {
-        flyway.validate(); assertEquals("10", flyway.info().current().getVersion().getVersion());
+        flyway.validate(); assertEquals("13", flyway.info().current().getVersion().getVersion());
         assertEquals(0, count("incidents", alpha)); assertEquals(0, count("incident_events", alpha));
         assertEquals(0, count("incident_alerts", alpha));
     }
@@ -151,7 +151,7 @@ class IncidentCorrelationIntegrationTest {
         var incident = incidentFor(resolved);
         assertEquals(incidentId, incident.getId()); assertEquals(IncidentStatus.OPEN, incident.getStatus()); assertNull(incident.getResolvedAt());
         assertEquals(AlertStatus.RESOLVED, resolved.getStatus()); assertEquals(3, timeline(incident).size());
-        var note = timeline(incident).stream().filter(e -> e.getEventType() == IncidentEventType.COMMENT_ADDED).findFirst().orElseThrow();
+        var note = timeline(incident).stream().filter(e -> e.getEventType() == IncidentEventType.ALERT_RESOLVED).findFirst().orElseThrow();
         assertEquals(resolved.getId(), note.getSourceAlertId()); assertNull(note.getActorUserId());
         assertTrue(note.getDetails().contains(resolved.getResolutionHealthCheckResultId().toString()));
     }
@@ -296,7 +296,7 @@ class IncidentCorrelationIntegrationTest {
         record(HealthStatus.DOWN); record(HealthStatus.DOWN); record(HealthStatus.DOWN); record(HealthStatus.UP);
         var alert = alerts.findByOrganisationIdAndMonitoredServiceIdOrderByFirstSeenAtDesc(alpha.getId(), first.getId()).getFirst();
         jdbc.execute("alter table incident_events add constraint fixture_reject_recovery check (organisation_id <> '" + alpha.getId()
-                + "'::uuid or event_type <> 'COMMENT_ADDED')");
+                + "'::uuid or event_type <> 'ALERT_RESOLVED')");
         try {
             assertThrows(DataIntegrityViolationException.class, () -> record(HealthStatus.UP));
             assertEquals(AlertStatus.ACTIVE, alerts.findByIdAndOrganisationId(alert.getId(), alpha.getId()).orElseThrow().getStatus());

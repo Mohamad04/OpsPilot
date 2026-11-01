@@ -2,6 +2,12 @@ package com.opspilot.backend.web.exception;
 
 import com.opspilot.backend.application.exception.MonitoredServiceNotFoundException;
 import com.opspilot.backend.application.exception.AlertNotFoundException;
+import com.opspilot.backend.application.exception.IncidentNotFoundException;
+import com.opspilot.backend.application.exception.IncidentAssigneeNotFoundException;
+import com.opspilot.backend.application.exception.IncidentConflictException;
+import com.opspilot.backend.application.exception.InvalidIncidentQueryException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import com.opspilot.backend.application.exception.InvalidAlertQueryException;
 import com.opspilot.backend.application.exception.InsufficientOrganisationPermissionException;
 import com.opspilot.backend.application.exception.ForbiddenException;
@@ -28,6 +34,26 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler({IncidentNotFoundException.class, IncidentAssigneeNotFoundException.class})
+    public ResponseEntity<ApiError> handleIncidentNotFound(RuntimeException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiError(404, exception.getMessage(), Map.of()));
+    }
+
+    @ExceptionHandler(InvalidIncidentQueryException.class)
+    public ResponseEntity<ApiError> handleIncidentQuery(InvalidIncidentQueryException exception) {
+        return ResponseEntity.badRequest().body(new ApiError(400, exception.getMessage(), Map.of()));
+    }
+
+    @ExceptionHandler({InvalidIncidentTransitionException.class, IncidentConflictException.class})
+    public ResponseEntity<ApiError> handleIncidentConflict(RuntimeException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(409, exception.getMessage(), Map.of()));
+    }
+
+    @ExceptionHandler({OptimisticLockingFailureException.class, PessimisticLockingFailureException.class})
+    public ResponseEntity<ApiError> handlePersistenceConflict() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError(409, "Concurrent modification; reload and retry", Map.of()));
+    }
 
     @ExceptionHandler(AlertNotFoundException.class)
     public ResponseEntity<ApiError> handleAlertNotFound(AlertNotFoundException exception) {

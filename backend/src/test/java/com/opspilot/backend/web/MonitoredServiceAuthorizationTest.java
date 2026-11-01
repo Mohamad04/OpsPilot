@@ -55,6 +55,9 @@ class MonitoredServiceAuthorizationTest {
     @MockitoBean MonitoredServiceRepository serviceRepository;
     @MockitoBean OrganisationService organisationService;
     @MockitoBean JwtDecoder jwtDecoder;
+    @MockitoBean MembershipAuditEventRepository membershipAuditEvents;
+    @MockitoBean java.time.Clock clock;
+    @MockitoBean jakarta.persistence.EntityManager entityManager;
 
     private User user;
     private Organisation organisation;

@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -42,7 +43,16 @@ public class IncidentCorrelationService {
             Incident incident = incidents.findByIdAndOrganisationIdForUpdate(existing.get().getIncidentId(), organisationId)
                     .orElseThrow(() -> new IllegalStateException("Incident association is unavailable"));
             if (alert.getStatus() == AlertStatus.RESOLVED) {
-                append(incident, alert, IncidentEventType.COMMENT_ADDED,
+                // Legacy recovery notes remain immutable and must not be duplicated after upgrading.
+                var legacy = events.findByOrganisationIdAndSourceAlertIdAndEventType(
+                        organisationId, alertId, IncidentEventType.COMMENT_ADDED);
+                if (legacy.isPresent()) {
+                    if (!incident.getId().equals(legacy.get().getIncidentId())) {
+                        throw new IllegalStateException("Alert recovery evidence belongs to a different incident");
+                    }
+                    return;
+                }
+                append(incident, alert, IncidentEventType.ALERT_RESOLVED,
                         "Alert " + alertId + " resolved at " + alert.getResolvedAt()
                                 + "; recovery health-check result " + alert.getResolutionHealthCheckResultId()
                                 + ". Incident status is unchanged.");
@@ -86,8 +96,10 @@ public class IncidentCorrelationService {
             }
             return;
         }
-        Instant at = clock.instant();
+        Instant at = clock.instant().truncatedTo(ChronoUnit.MICROS);
         if (at.isBefore(incident.getCreatedAt())) at = incident.getCreatedAt();
+        var latest = events.findFirstByOrganisationIdAndIncidentIdOrderByOccurredAtDescIdDesc(incident.getOrganisationId(), incident.getId());
+        if (latest.isPresent() && !at.isAfter(latest.get().getOccurredAt())) at = latest.get().getOccurredAt().plus(1, ChronoUnit.MICROS);
         events.save(IncidentEvent.forSystemAlert(incident, alert, type, at, details));
     }
 }

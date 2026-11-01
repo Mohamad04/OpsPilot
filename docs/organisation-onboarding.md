@@ -1,5 +1,11 @@
 # Create Organisation and authenticated onboarding
 
+**Subsequent membership administration:** the [Phase 4D.5 API](organisation-membership-api-phase-4d5.md)
+now lets OWNER/ADMIN add eligible already-provisioned local users and manage
+permitted non-OWNER roles. All members can read a bounded directory. Keycloak
+realm roles do not establish membership; initial creator/OWNER bootstrap remains
+unchanged. Full administration/invitation UI is not implemented.
+
 The existing form, authenticated POST, backend creation service, and automatic
 creator OWNER membership were already connected. This change completes the empty
 state, error feedback, cache/selection transition, and success feedback without

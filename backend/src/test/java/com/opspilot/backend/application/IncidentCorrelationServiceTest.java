@@ -97,7 +97,7 @@ class IncidentCorrelationServiceTest {
         ReflectionTestUtils.setField(up, "id", UUID.randomUUID()); alert.resolve(up, 2);
         consumer().process(organisationId, serviceId, alert.getId());
         var capture = ArgumentCaptor.forClass(IncidentEvent.class); verify(events).save(capture.capture());
-        assertEquals(IncidentEventType.COMMENT_ADDED, capture.getValue().getEventType());
+        assertEquals(IncidentEventType.ALERT_RESOLVED, capture.getValue().getEventType());
         assertNull(capture.getValue().getActorUserId());
         assertTrue(capture.getValue().getDetails().contains(up.getId().toString()));
         assertEquals(incident.getCreatedAt(), capture.getValue().getOccurredAt());

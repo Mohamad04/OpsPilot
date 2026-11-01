@@ -1,6 +1,7 @@
 package com.opspilot.backend.domain;
 
 import jakarta.persistence.*;
+import com.opspilot.backend.domain.exception.InvalidIncidentTransitionException;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -16,6 +17,9 @@ public class Incident {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+    @Version
+    @Column(nullable = false)
+    private long version;
     @Column(nullable = false, updatable = false)
     private UUID organisationId;
     @Column(updatable = false)
@@ -38,7 +42,7 @@ public class Incident {
 
     protected Incident() { }
 
-    /** Opens an incident only; lifecycle transitions belong to the next domain increment. */
+    /** Creates the initial OPEN state; changeStatus validates subsequent lifecycle transitions. */
     public static Incident open(UUID organisationId, String title, String description,
                                 AlertSeverity severity, Instant createdAt,
                                 OrganisationMembership assignee) {
@@ -85,6 +89,33 @@ public class Incident {
         return switch (value) { case LOW -> 1; case MEDIUM -> 2; case HIGH -> 3; case CRITICAL -> 4; };
     }
 
+    public void changeStatus(IncidentStatus target, Instant at) {
+        if (!status.canTransitionTo(target)) throw new InvalidIncidentTransitionException(status, target);
+        Instant changedAt = Objects.requireNonNull(at, "Transition time is required").truncatedTo(ChronoUnit.MICROS);
+        if (changedAt.isBefore(createdAt) || (acknowledgedAt != null && changedAt.isBefore(acknowledgedAt))
+                || (resolvedAt != null && changedAt.isBefore(resolvedAt))) {
+            throw new IllegalArgumentException("Transition time cannot precede existing incident timestamps");
+        }
+        if (target == IncidentStatus.ACKNOWLEDGED) acknowledgedAt = changedAt;
+        if (target == IncidentStatus.RESOLVED) resolvedAt = changedAt;
+        // Reopening retains the first acknowledgement; prior resolutions remain in immutable events.
+        if (!status.isOngoing() && target.isOngoing()) resolvedAt = null;
+        status = target;
+    }
+
+    /** Assignment is operational work; finished incidents retain their final assignment. */
+    public boolean assignTo(OrganisationMembership assignee) {
+        if (!status.isOngoing()) throw new IllegalStateException("Only ongoing incidents can be assigned");
+        UUID next = memberUserId(organisationId, assignee);
+        if (assignee != null && (assignee.getUser().getStatus() != UserStatus.ACTIVE
+                || assignee.getRole() == OrganisationRole.VIEWER)) {
+            throw new IllegalArgumentException("Assignee must be an active operational member");
+        }
+        if (Objects.equals(assignedUserId, next)) return false;
+        assignedUserId = next;
+        return true;
+    }
+
     // Membership is a domain input, not a grant of permission. The database checks current membership too.
     static UUID memberUserId(UUID organisationId, OrganisationMembership membership) {
         if (membership == null) return null;
@@ -97,6 +128,7 @@ public class Incident {
     }
 
     public UUID getId() { return id; }
+    public long getVersion() { return version; }
     public UUID getOrganisationId() { return organisationId; }
     public UUID getMonitoredServiceId() { return monitoredServiceId; }
     public String getTitle() { return title; }

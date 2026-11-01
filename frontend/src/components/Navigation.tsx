@@ -29,6 +29,9 @@ export default function Navigation({ id, onNavigate }: { id?: string; onNavigate
                 <li><NavLink to="/alerts" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"} onClick={onNavigate} title="Alerts">
                     <Icon name="activity" /><span className="nav-label">Alerts</span>
                 </NavLink></li>
+                <li><NavLink to="/incidents" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"} onClick={onNavigate} title="Incidents">
+                    <Icon name="incidents" /><span className="nav-label">Incidents</span>
+                </NavLink></li>
             </ul>
         </nav>
     );
